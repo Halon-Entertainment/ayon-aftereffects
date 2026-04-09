@@ -73,6 +73,17 @@
 
     <script type=text/javascript>
       $(function() {
+        $("a#versionup-button").bind("click", function() {
+          RPC.call('AfterEffects.version_up_route').then(function (data) {
+          }, function (error) {
+              alert(error);
+          });
+        });
+      });
+    </script>
+
+    <script type=text/javascript>
+      $(function() {
         $("a#setresolution-button").bind("click", function() {
           RPC.call('AfterEffects.setresolution_route').then(function (data) {
           }, function (error) {
@@ -171,6 +182,7 @@
             <div><a href=# id=loader-button><button class="hostFontSize">Load...</button></a></div>
             <div><a href=# id=publish-button><button class="hostFontSize">Publish...</button></a></div>
             <div><a href=# id=sceneinventory-button><button class="hostFontSize">Manage...</button></a></div>
+            <div><a href=# id=versionup-button><button class="hostFontSize">Version Up</button></a></div>
             <div><a href=# id=separator0><button class="hostFontSize">&nbsp;</button></a></div>
             <div><a href=# id=setresolution-button><button class="hostFontSize">Set Resolution</button></a></div>
             <div><a href=# id=setframes-button><button class="hostFontSize">Set Frame Range</button></a></div>
