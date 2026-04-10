@@ -143,8 +143,8 @@
 
     <script type=text/javascript>
       $(function() {
-        $("a#versionup-button").bind("click", function() {
-          RPC.call('AfterEffects.version_up_route').then(function (data) {
+        $("a#create-shot-comp-button").bind("click", function() {
+          RPC.call('AfterEffects.create_shot_comp_route').then(function (data) {
           }, function (error) {
               alert(error);
           });
@@ -230,6 +230,17 @@
     </script>
 
     <script type=text/javascript>
+      $(function() {
+        $("a#versionup-button").bind("click", function() {
+          RPC.call('AfterEffects.version_up_route').then(function (data) {
+          }, function (error) {
+              alert(error);
+          });
+        });
+      });
+    </script>
+
+    <script type=text/javascript>
             $(function() {
               $("a#experimental-button").bind("click", function() {
                 RPC.call('AfterEffects.experimental_tools_route').then(function (data) {
@@ -252,7 +263,6 @@
             <div><a href=# id=loader-button><button class="hostFontSize">Load...</button></a></div>
             <div><a href=# id=publish-button><button class="hostFontSize">Publish...</button></a></div>
             <div><a href=# id=sceneinventory-button><button class="hostFontSize">Manage...</button></a></div>
-            <div><a href=# id=versionup-button><button class="hostFontSize">Version Up</button></a></div>
             <div><a href=# id=separator0><button class="hostFontSize">&nbsp;</button></a></div>
             <div><a href=# id=setresolution-button><button class="hostFontSize">Set Resolution</button></a></div>
             <div><a href=# id=setframes-button><button class="hostFontSize">Set Frame Range</button></a></div>
@@ -264,6 +274,16 @@
             <div><a href=# id=separator3><button class="hostFontSize">&nbsp;</button></a></div>
             <div><a href=# id=script-editor-button><button class="hostFontSize">Script Editor</button></a></div>
             <div><a href=# id=experimental-button><button class="hostFontSize">Experimental Tools...</button></a></div>
+            <div style="text-align: center;">
+              <a href=#>
+                <button class="hostFontSize" disabled>
+                  &mdash; HALON &mdash;
+                </button>
+              </a>
+            </div>
+ 
+            <div><a href=# id=create-shot-comp-button><button class="hostFontSize">New Shot Comp</button></a></div>
+            <div><a href=# id=versionup-button><button class="hostFontSize">Version Up</button></a></div>
         </div>
 
     </div>

@@ -12,11 +12,13 @@ from ayon_core.pipeline import PublishValidationError
 
 from ayon_aftereffects.api import get_stub
 
+
 @attr.s
 class AERenderInstance(RenderInstance):
     # extend generic, composition name is needed
     comp_name: str = attr.ib(default=None)
     comp_id: int = attr.ib(default=None)
+    orig_comp_name: str = attr.ib(default=None)
     fps: float = attr.ib(default=None)
     projectEntity: dict = attr.ib(default=None)
     stagingDir: str = attr.ib(default=None)
@@ -40,7 +42,7 @@ class CollectAERender(publish.AbstractCollectRender):
     hosts = ["aftereffects"]
 
     padding_width = 6
-    rendered_extension = 'png'
+    rendered_extension = "png"
 
     _stub = None
 
@@ -78,8 +80,7 @@ class CollectAERender(publish.AbstractCollectRender):
 
             comp_id = int(inst.data["members"][0])
 
-            comp_info = CollectAERender.get_stub().get_comp_properties(
-                comp_id)
+            comp_info = CollectAERender.get_stub().get_comp_properties(comp_id)
 
             if not comp_info:
                 self.log.warning("Orphaned instance, deleting metadata")
@@ -88,8 +89,9 @@ class CollectAERender(publish.AbstractCollectRender):
                 continue
 
             frame_start = comp_info.frameStart
-            frame_end = round(comp_info.frameStart +
-                              comp_info.framesDuration) - 1
+            frame_end = (
+                round(comp_info.frameStart + comp_info.framesDuration) - 1
+            )
             fps = comp_info.frameRate
             # TODO add resolution when supported by extension
 
@@ -98,7 +100,8 @@ class CollectAERender(publish.AbstractCollectRender):
             render_q = CollectAERender.get_stub().get_render_info(comp_id)
             if not render_q:
                 raise PublishValidationError(
-                    "No file extension set in Render Queue")
+                    "No file extension set in Render Queue"
+                )
             render_item = render_q[0]
 
             instance_families = inst.data.get("families", [])
@@ -125,7 +128,7 @@ class CollectAERender(publish.AbstractCollectRender):
                 folderPath=inst.data["folderPath"],
                 task=task_name,
                 attachTo=False,
-                setMembers='',
+                setMembers="",
                 publish=True,
                 name=product_name,
                 resolutionWidth=render_item.width,
@@ -144,16 +147,18 @@ class CollectAERender(publish.AbstractCollectRender):
                 # one path per output module, could be multiple
                 render_queue_file_paths=[item.file_name for item in render_q],
                 # The source instance this render instance replaces
-                source_instance=inst
+                source_instance=inst,
             )
 
             comp = compositions_by_id.get(comp_id)
             if not comp:
-                raise ValueError("There is no composition for item {}".
-                                 format(comp_id))
+                raise ValueError(
+                    "There is no composition for item {}".format(comp_id)
+                )
             instance.outputDir = self._get_output_dir(instance)
             instance.comp_name = comp.name
             instance.comp_id = comp_id
+            instance.orig_comp_name = inst.data.get("orig_comp_name")
 
             creator_attributes = inst.data["creator_attributes"]
             if creator_attributes["render_target"] == "local":
@@ -193,13 +198,11 @@ class CollectAERender(publish.AbstractCollectRender):
         expected_files = []
         for file_name in render_instance.render_queue_file_paths:
             _, ext = os.path.splitext(os.path.basename(file_name))
-            ext = ext.replace('.', '')
+            ext = ext.replace(".", "")
             version_str = "v{:03d}".format(render_instance.version)
             if "#" not in file_name:  # single frame (mov)
                 file_name = "{}_{}.{}".format(
-                    render_instance.productName,
-                    version_str,
-                    ext
+                    render_instance.productName, version_str, ext
                 )
                 file_path = os.path.join(base_dir, file_name)
                 expected_files.append(file_path)
@@ -209,7 +212,7 @@ class CollectAERender(publish.AbstractCollectRender):
                         render_instance.productName,
                         version_str,
                         str(frame).zfill(self.padding_width),
-                        ext
+                        ext,
                     )
 
                     file_path = os.path.join(base_dir, file_name)
@@ -230,8 +233,9 @@ class CollectAERender(publish.AbstractCollectRender):
         # render to folder of workfile
         base_dir = os.path.dirname(render_instance.source)
         file_name, _ = os.path.splitext(
-            os.path.basename(render_instance.source))
-        base_dir = os.path.join(base_dir, 'renders', 'aftereffects', file_name)
+            os.path.basename(render_instance.source)
+        )
+        base_dir = os.path.join(base_dir, "renders", "aftereffects", file_name)
 
         # for submit_publish_job
         return base_dir
