@@ -73,6 +73,17 @@
 
     <script type=text/javascript>
       $(function() {
+        $("a#create-shot-comp-button").bind("click", function() {
+          RPC.call('AfterEffects.create_shot_comp_route').then(function (data) {
+          }, function (error) {
+              alert(error);
+          });
+        });
+      });
+    </script>
+
+    <script type=text/javascript>
+      $(function() {
         $("a#setresolution-button").bind("click", function() {
           RPC.call('AfterEffects.setresolution_route').then(function (data) {
           }, function (error) {
@@ -182,6 +193,15 @@
             <div><a href=# id=separator3><button class="hostFontSize">&nbsp;</button></a></div>
             <div><a href=# id=script-editor-button><button class="hostFontSize">Script Editor</button></a></div>
             <div><a href=# id=experimental-button><button class="hostFontSize">Experimental Tools...</button></a></div>
+            <div style="text-align: center;">
+              <a href=#>
+                <button class="hostFontSize" disabled>
+                  &mdash; HALON &mdash;
+                </button>
+              </a>
+            </div>
+ 
+            <div><a href=# id=create-shot-comp-button><button class="hostFontSize">New Shot Comp</button></a></div>
         </div>
 
     </div>
