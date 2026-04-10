@@ -168,6 +168,41 @@ def set_settings(
             stub.print_msg(msg)
 
 
+def create_shot_comp():
+    """Create a new composition with AYON task settings applied.
+
+    Creates a comp named after the current folder (shot name) and
+    applies frame range, fps, and resolution from the task entity
+    attributes. This eliminates manual project setup when starting
+    work on a new shot comp.
+    """
+    entity = get_current_task_entity()
+    settings = get_entity_attributes(entity)
+
+    folder_path = os.environ.get("AYON_FOLDER_PATH", "")
+    comp_name = folder_path.rsplit("/", 1)[-1] if folder_path else "shot_comp"
+
+    stub = get_stub()
+    comp_id = stub.add_item(comp_name, "COMP")
+
+    set_settings(
+        frames=True,
+        resolution=True,
+        comp_ids=[comp_id],
+        print_msg=False,
+        entity=entity,
+    )
+
+    msg = (
+        f"Created comp '{comp_name}' — "
+        f"fps:{settings['fps']}, "
+        f"frames:{settings['frameStart']}-{settings['frameEnd']}, "
+        f"res:{settings['resolutionWidth']}x{settings['resolutionHeight']}"
+    )
+    log.info(msg)
+    stub.print_msg(msg)
+
+
 def find_close_plugin(close_plugin_name, log):
     if close_plugin_name:
         plugins = pyblish.api.discover()

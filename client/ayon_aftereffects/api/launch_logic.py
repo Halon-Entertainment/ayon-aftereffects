@@ -432,6 +432,14 @@ class AfterEffectsRoute(WebSocketRoute):
         # Required return statement.
         return "nothing"
 
+    async def create_shot_comp_route(self):
+        from .lib import create_shot_comp
+
+        ProcessLauncher.execute_in_main_thread(create_shot_comp)
+
+        # Required return statement.
+        return "nothing"
+
     def create_placeholder_route(self):
         from ayon_aftereffects.api.workfile_template_builder import \
             create_placeholder

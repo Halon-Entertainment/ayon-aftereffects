@@ -1,6 +1,6 @@
 name = "aftereffects"
 title = "AfterEffects"
-version = "0.2.17+compname"
+version = "0.2.18+shotcomp"
 app_host_name = "aftereffects"
 client_dir = "ayon_aftereffects"
 project_can_override_addon_version = True
