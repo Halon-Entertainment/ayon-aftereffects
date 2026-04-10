@@ -168,21 +168,52 @@ def set_settings(
             stub.print_msg(msg)
 
 
+def _get_next_version(stub, base_name):
+    """Determine the next version number for a comp name.
+
+    Scans existing compositions for names matching ``base_name_v###``
+    and returns the next version string (e.g. ``v002``).  Returns
+    ``v001`` when no matching comps exist.
+
+    Args:
+        stub (AfterEffectsServerStub): Connection stub.
+        base_name (str): Comp name prefix without version suffix.
+
+    Returns:
+        str: Version string like ``v001``.
+    """
+    version_re = re.compile(
+        r"^" + re.escape(base_name) + r"_v(\d{3})$", re.IGNORECASE
+    )
+    max_version = 0
+    for comp in stub.get_items(comps=True, folders=False, footages=False):
+        match = version_re.match(comp.name)
+        if match:
+            max_version = max(max_version, int(match.group(1)))
+    return f"v{max_version + 1:03d}"
+
+
 def create_shot_comp():
     """Create a new composition with AYON task settings applied.
 
-    Creates a comp named after the current folder (shot name) and
-    applies frame range, fps, and resolution from the task entity
-    attributes. This eliminates manual project setup when starting
-    work on a new shot comp.
+    Creates a comp following Halon anatomy naming:
+    ``<shot>_<task>_HLN_<version>`` (e.g. ``sh010_compositing_HLN_v001``).
+    Applies frame range, fps, and resolution from the task entity
+    attributes automatically.
     """
     entity = get_current_task_entity()
     settings = get_entity_attributes(entity)
 
     folder_path = os.environ.get("AYON_FOLDER_PATH", "")
-    comp_name = folder_path.rsplit("/", 1)[-1] if folder_path else "shot_comp"
+    shot = folder_path.rsplit("/", 1)[-1] if folder_path else "shot"
+    task = os.environ.get("AYON_TASK_NAME", "comp")
 
     stub = get_stub()
+
+    base_name = f"{shot}_{task}_HLN"
+    version = _get_next_version(stub, base_name)
+    comp_name = f"{base_name}_{version}"
+
     comp_id = stub.add_item(comp_name, "COMP")
 
     set_settings(
