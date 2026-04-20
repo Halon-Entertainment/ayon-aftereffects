@@ -609,13 +609,17 @@ class AfterEffectsServerStub():
 
         return self._handle_return(res)
 
-    def setup_render_queue(self, comp_id, template_name="H.264"):
-        """Add composition to Render Queue with an H.264 output module.
+    def setup_render_queue(self, comp_id, template_name="PNG"):
+        """Add composition to Render Queue with a lossless output module.
 
-        Adds the composition to the Render Queue and applies the
-        output module template whose name matches *template_name*
-        (case-insensitive substring match).  Falls back to the first
-        template containing "H.264" or "h264".
+        Adds the composition to the Render Queue and applies a lossless
+        output module template so that ExtractReview can transcode from
+        clean source to delivery formats (H.264, DNxHD, etc.) without
+        double-compression quality loss.
+
+        Searches for *template_name* first (default ``"PNG"``), then
+        falls back to any template containing ``"lossless"`` or
+        ``"tiff"``.
 
         Args:
             comp_id (int): Composition id.

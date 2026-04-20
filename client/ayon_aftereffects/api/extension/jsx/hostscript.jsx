@@ -884,15 +884,26 @@ function getAppVersion(){
 
 function setupRenderQueue(comp_id, template_name){
     /**
-     * Add composition to Render Queue and apply an output module template.
+     * Add composition to Render Queue and apply a lossless output module.
      *
-     * Searches available output module templates for one matching
-     * ``template_name`` (case-insensitive substring match).  Falls back
-     * to the first template whose name contains "H.264" or "h264".
+     * The render queue output is source material for ExtractReview, which
+     * transcodes it into delivery formats (H.264, DNxHD, etc.) via ffmpeg.
+     * To avoid double-compression quality loss, the render queue should
+     * output a lossless format.
+     *
+     * Only lossless image sequence formats (PNG, TIFF) are valid
+     * because ExtractReview only accepts extensions in its
+     * ``supported_exts`` set.  AVI ("Lossless" on Windows) is not
+     * supported and would be silently skipped.
+     *
+     * Search order (case-insensitive substring):
+     *   1. Match for requested template_name (default "PNG")
+     *   2. Fallback: any template containing "tiff"
+     *   3. Error if neither found
      *
      * Args:
      *     comp_id (int): composition id
-     *     template_name (str): preferred template name (e.g. "H.264")
+     *     template_name (str): preferred template name (default "PNG")
      * Returns:
      *     SingleItemValue with the render queue item index, or error
      */
@@ -909,7 +920,7 @@ function setupRenderQueue(comp_id, template_name){
 
         // Search for the requested template (substring, case-insensitive)
         var matched = "";
-        var fallback = "";
+        var tiffFallback = "";
         var needle = template_name.toLowerCase();
         for (var t = 0; t < templates.length; t++){
             var tLower = templates[t].toLowerCase();
@@ -917,22 +928,26 @@ function setupRenderQueue(comp_id, template_name){
                 matched = templates[t];
                 break;
             }
-            if (!fallback && (tLower.indexOf("h.264") !== -1
-                              || tLower.indexOf("h264") !== -1)){
-                fallback = templates[t];
+            if (!tiffFallback && tLower.indexOf("tiff") !== -1){
+                tiffFallback = templates[t];
             }
         }
 
-        var chosen = matched || fallback;
-        if (chosen){
-            om.applyTemplate(chosen);
+        var chosen = matched || tiffFallback;
+        if (!chosen){
+            app.endUndoGroup();
+            return _prepareError(
+                "No PNG or TIFF output module template found. "
+                + "Available templates: " + templates.join(", ")
+            );
         }
+        om.applyTemplate(chosen);
 
         app.endUndoGroup();
 
         var result = {
             "index": rqItem.index,
-            "template": chosen || "(default)"
+            "template": chosen
         };
         return JSON.stringify({"result": JSON.stringify(result)});
     } catch (error) {
