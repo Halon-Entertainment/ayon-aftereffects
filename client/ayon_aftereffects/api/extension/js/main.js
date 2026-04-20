@@ -370,6 +370,18 @@ function main(websocket_url){
                 return result;
             });
     });
+
+    RPC.addRoute('AfterEffects.setup_render_queue', function (data) {
+        log.warn('Server called client route "setup_render_queue":', data);
+        var escaped_template = EscapeStringForJSX(data.template_name);
+        return runEvalScript(
+            "setupRenderQueue(" + data.comp_id + ", '" +
+            escaped_template + "')"
+        ).then(function(result){
+            log.warn("setup_render_queue: " + result);
+            return result;
+        });
+    });
 }
 
 /** main entry point **/

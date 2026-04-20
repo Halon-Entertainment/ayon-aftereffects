@@ -882,6 +882,67 @@ function getAppVersion(){
     return _prepareSingleValue(app.version);
 }
 
+function setupRenderQueue(comp_id, template_name){
+    /**
+     * Add composition to Render Queue and apply an output module template.
+     *
+     * Searches available output module templates for one matching
+     * ``template_name`` (case-insensitive substring match).  Falls back
+     * to the first template whose name contains "H.264" or "h264".
+     *
+     * Args:
+     *     comp_id (int): composition id
+     *     template_name (str): preferred template name (e.g. "H.264")
+     * Returns:
+     *     SingleItemValue with the render queue item index, or error
+     */
+    var comp = app.project.itemByID(comp_id);
+    if (!comp || !(comp instanceof CompItem)){
+        return _prepareError("No composition found with id " + comp_id);
+    }
+
+    app.beginUndoGroup("Setup Render Queue");
+    try {
+        var rqItem = app.project.renderQueue.items.add(comp);
+        var om = rqItem.outputModule(1);
+        var templates = om.templates;
+
+        // Search for the requested template (substring, case-insensitive)
+        var matched = "";
+        var fallback = "";
+        var needle = template_name.toLowerCase();
+        for (var t = 0; t < templates.length; t++){
+            var tLower = templates[t].toLowerCase();
+            if (tLower.indexOf(needle) !== -1){
+                matched = templates[t];
+                break;
+            }
+            if (!fallback && (tLower.indexOf("h.264") !== -1
+                              || tLower.indexOf("h264") !== -1)){
+                fallback = templates[t];
+            }
+        }
+
+        var chosen = matched || fallback;
+        if (chosen){
+            om.applyTemplate(chosen);
+        }
+
+        app.endUndoGroup();
+
+        var result = {
+            "index": rqItem.index,
+            "template": chosen || "(default)"
+        };
+        return JSON.stringify({"result": JSON.stringify(result)});
+    } catch (error) {
+        app.endUndoGroup();
+        return _prepareError(
+            "Failed to setup render queue: " + error.toString()
+        );
+    }
+}
+
 function printMsg(msg){
     alert(msg);
 }

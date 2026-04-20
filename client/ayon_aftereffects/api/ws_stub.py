@@ -609,6 +609,27 @@ class AfterEffectsServerStub():
 
         return self._handle_return(res)
 
+    def setup_render_queue(self, comp_id, template_name="H.264"):
+        """Add composition to Render Queue with an H.264 output module.
+
+        Adds the composition to the Render Queue and applies the
+        output module template whose name matches *template_name*
+        (case-insensitive substring match).  Falls back to the first
+        template containing "H.264" or "h264".
+
+        Args:
+            comp_id (int): Composition id.
+            template_name (str): Preferred template name.
+
+        Returns:
+            str: JSON with render queue item index and chosen template.
+        """
+        res = self.websocketserver.call(self.client.call(
+            'AfterEffects.setup_render_queue',
+            comp_id=comp_id,
+            template_name=template_name))
+        return self._handle_return(res)
+
     def render(self, folder_url, comp_id):
         """
             Render all renderqueueitem to 'folder_url'
