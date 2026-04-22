@@ -38,6 +38,7 @@ class RenderCreator(Creator):
     mark_for_review = True
     force_setting_values = True
     rename_comp_to_product_name = True
+    output_module_template = "PNG"
 
     def create(self, product_name, data, pre_create_data):
         stub = api.get_stub()  # only after After Effects is up
@@ -227,6 +228,9 @@ class RenderCreator(Creator):
         )
         self.force_setting_values = plugin_settings.get(
             "force_setting_values", self.force_setting_values
+        )
+        self.output_module_template = plugin_settings.get(
+            "output_module_template", self.output_module_template
         )
 
     def get_detail_description(self):
