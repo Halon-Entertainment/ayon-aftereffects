@@ -937,7 +937,7 @@ function setupRenderQueue(comp_id, template_name){
         if (!chosen){
             app.endUndoGroup();
             return _prepareError(
-                "No PNG or TIFF output module template found. "
+                "No '" + template_name + "' or TIFF output module template found. "
                 + "Available templates: " + templates.join(", ")
             );
         }

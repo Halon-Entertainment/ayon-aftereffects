@@ -224,6 +224,8 @@ def create_shot_comp():
         entity=entity,
     )
 
+    # NOTE: uses stub default ("PNG"), not the output_module_template
+    # setting — panel context doesn't have access to plugin settings.
     stub.setup_render_queue(comp_id)
 
     msg = (

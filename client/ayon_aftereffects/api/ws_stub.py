@@ -618,8 +618,7 @@ class AfterEffectsServerStub():
         double-compression quality loss.
 
         Searches for *template_name* first (default ``"PNG"``), then
-        falls back to any template containing ``"lossless"`` or
-        ``"tiff"``.
+        falls back to any template containing ``"tiff"``.
 
         Args:
             comp_id (int): Composition id.
