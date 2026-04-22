@@ -45,6 +45,7 @@ DEFAULT_AFTEREFFECTS_SETTING = {
             "default_variants": ["Main"],
             "force_setting_values": True,
             "rename_comp_to_product_name": True,
+            "output_module_template": "PNG",
         }
     },
     "publish": AE_PUBLISH_PLUGINS_DEFAULTS,

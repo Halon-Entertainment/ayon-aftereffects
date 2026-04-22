@@ -17,6 +17,16 @@ class CreateRenderPlugin(BaseSettingsModel):
             "or when updating product name, e.g. on variant change."
         )
     )
+    output_module_template: str = SettingsField(
+        "PNG",
+        title="Output module template",
+        description=(
+            "Name used to match an After Effects output module template "
+            "when auto-configuring the Render Queue. Matched as a "
+            "case-insensitive substring (e.g. 'PNG', 'TIFF', 'Lossless'). "
+            "Falls back to TIFF if no match is found."
+        )
+    )
 
 
 class AfterEffectsCreatorPlugins(BaseSettingsModel):
