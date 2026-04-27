@@ -4,6 +4,77 @@ indent: 4, maxerr: 50 */
 
 
 var csInterface = new CSInterface();
+var PANEL_LOG_FILE_PREFIX = "ayon-aftereffects-panel-error-";
+
+function _toFsPath(path) {
+    if (!path) {
+        return "";
+    }
+    var normalized = path.toString();
+    if (normalized.indexOf("file:///") === 0) {
+        normalized = decodeURI(normalized.substring(8));
+    } else if (normalized.indexOf("file://") === 0) {
+        normalized = decodeURI(normalized.substring(7));
+    }
+    return normalized.replace(/\//g, "\\");
+}
+
+function _getAeLogsDir() {
+    var userDataPath = "";
+    var fallbackPath = "%APPDATA%\\Adobe\\After Effects\\Logs";
+    try {
+        userDataPath = csInterface.getSystemPath(SystemPath.USER_DATA);
+    } catch (error) {
+        userDataPath = "";
+    }
+
+    userDataPath = _toFsPath(userDataPath);
+    if (!userDataPath) {
+        return fallbackPath;
+    }
+    return userDataPath + "\\Adobe\\After Effects\\Logs";
+}
+
+function _writeStartupErrorLog(message, errorObj) {
+    try {
+        if (!window.cep || !window.cep.fs) {
+            return;
+        }
+
+        var logsDir = _getAeLogsDir();
+        var fileSystem = window.cep.fs;
+        fileSystem.makedir(logsDir);
+
+        var now = new Date();
+        var isoDate = now.toISOString().replace(/[:.]/g, "-");
+        var logPath = logsDir + "\\" + PANEL_LOG_FILE_PREFIX + isoDate + ".log";
+        var stack = "";
+        if (errorObj && errorObj.stack) {
+            stack = errorObj.stack;
+        }
+
+        var payload = [
+            "timestamp=" + now.toISOString(),
+            "message=" + message,
+            "stack=" + stack
+        ].join("\n");
+        fileSystem.writeFile(logPath, payload);
+    } catch (ignoreError) {
+        // Last-resort logging must never crash startup.
+    }
+}
+
+window.onerror = function (message, source, lineno, colno, error) {
+    var payload = "Uncaught error: " + message + " (" + source + ":" + lineno +
+        ":" + colno + ")";
+    _writeStartupErrorLog(payload, error);
+    return false;
+};
+
+window.addEventListener("unhandledrejection", function (event) {
+    var reason = event && event.reason ? event.reason.toString() : "unknown";
+    _writeStartupErrorLog("Unhandled promise rejection: " + reason, event.reason);
+});
 
 log.warn("script start");
 
@@ -12,20 +83,25 @@ WSRPC.TRACE = false;
 
 // get websocket server url from environment value
 async function startUp(url){
-    promis = runEvalScript("getEnv('" + url + "')");
+    try {
+        var promis = runEvalScript("getEnv('" + url + "')");
 
-    var res = await promis;
-    log.warn("res: " + res);
+        var res = await promis;
+        log.warn("res: " + res);
 
-    promis = runEvalScript("getEnv('AYON_DEBUG')");
-    var debug = await promis;
-    log.warn("debug: " + debug);
-    if (debug && debug.toString() == '3'){
-        WSRPC.DEBUG = true;
-        WSRPC.TRACE = true;
+        promis = runEvalScript("getEnv('AYON_DEBUG')");
+        var debug = await promis;
+        log.warn("debug: " + debug);
+        if (debug && debug.toString() == '3'){
+            WSRPC.DEBUG = true;
+            WSRPC.TRACE = true;
+        }
+        // run rest only after resolved promise
+        main(res);
+    } catch (error) {
+        _writeStartupErrorLog("Panel startup failed in startUp()", error);
+        throw error;
     }
-    // run rest only after resolved promise
-    main(res);
 }
 
 function get_extension_version(){
@@ -370,10 +446,24 @@ function main(websocket_url){
                 return result;
             });
     });
+
+    RPC.addRoute('AfterEffects.setup_render_queue', function (data) {
+        log.warn('Server called client route "setup_render_queue":', data);
+        var escaped_template = EscapeStringForJSX(data.template_name);
+        return runEvalScript(
+            "setupRenderQueue(" + data.comp_id + ", '" +
+            escaped_template + "')"
+        ).then(function(result){
+            log.warn("setup_render_queue: " + result);
+            return result;
+        });
+    });
 }
 
 /** main entry point **/
-startUp("WEBSOCKET_URL");
+startUp("WEBSOCKET_URL").catch(function (error) {
+    _writeStartupErrorLog("Panel startup failed on entrypoint", error);
+});
 
 (function () {
     'use strict';

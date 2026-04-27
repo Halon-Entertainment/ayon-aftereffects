@@ -224,6 +224,8 @@ def create_shot_comp():
         entity=entity,
     )
 
+    stub.setup_render_queue(comp_id)
+
     msg = (
         f"Created comp '{comp_name}' — "
         f"fps:{settings['fps']}, "

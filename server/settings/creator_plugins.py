@@ -10,7 +10,7 @@ class CreateRenderPlugin(BaseSettingsModel):
     force_setting_values: bool = SettingsField(
         True, title="Force resolution and duration values from Task")
     rename_comp_to_product_name: bool = SettingsField(
-        True,
+        False,
         title="Rename composition to product name",
         description=(
             "Rename composition to product name when creating render instance "

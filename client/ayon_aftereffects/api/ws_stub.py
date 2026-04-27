@@ -609,6 +609,31 @@ class AfterEffectsServerStub():
 
         return self._handle_return(res)
 
+    def setup_render_queue(self, comp_id, template_name="PNG"):
+        """Add composition to Render Queue with a lossless output module.
+
+        Adds the composition to the Render Queue and applies a lossless
+        output module template so that ExtractReview can transcode from
+        clean source to delivery formats (H.264, DNxHD, etc.) without
+        double-compression quality loss.
+
+        Searches for *template_name* first (default ``"PNG"``), then
+        falls back to any template containing ``"lossless"`` or
+        ``"tiff"``.
+
+        Args:
+            comp_id (int): Composition id.
+            template_name (str): Preferred template name.
+
+        Returns:
+            str: JSON with render queue item index and chosen template.
+        """
+        res = self.websocketserver.call(self.client.call(
+            'AfterEffects.setup_render_queue',
+            comp_id=comp_id,
+            template_name=template_name))
+        return self._handle_return(res)
+
     def render(self, folder_url, comp_id):
         """
             Render all renderqueueitem to 'folder_url'
