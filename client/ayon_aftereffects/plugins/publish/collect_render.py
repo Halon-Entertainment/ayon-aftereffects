@@ -100,11 +100,35 @@ class CollectAERender(publish.AbstractCollectRender):
             stub = CollectAERender.get_stub()
             render_q = stub.get_render_info(comp_id)
             if not render_q:
+                # Read the output module template from creator settings
+                ae_settings = context.data["project_settings"]["aftereffects"]
+                output_template = (
+                    ae_settings["create"]["RenderCreator"]
+                    .get("output_module_template", "PNG")
+                ).strip() or "PNG"
                 self.log.info(
                     "No Render Queue item for '%s', setting up "
-                    "H.264 output automatically.", comp_info.name
+                    "'%s' output automatically.",
+                    comp_info.name,
+                    output_template,
                 )
-                stub.setup_render_queue(comp_id)
+                try:
+                    stub.setup_render_queue(
+                        comp_id, template_name=output_template
+                    )
+                except ValueError as exc:
+                    raise PublishValidationError(
+                        "Could not auto-configure Render Queue for "
+                        "'{}': {}\n\n"
+                        "The configured output module template is "
+                        "'{}'. Check this value in AYON Settings > "
+                        "AfterEffects > Creator plugins > Create "
+                        "Render > Output module template.\n\n"
+                        "Alternatively, add a Render Queue item "
+                        "manually before publishing.".format(
+                            comp_info.name, exc, output_template
+                        )
+                    )
                 render_q = stub.get_render_info(comp_id)
                 if not render_q:
                     raise PublishValidationError(
