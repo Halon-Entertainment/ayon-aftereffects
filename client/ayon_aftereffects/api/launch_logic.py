@@ -115,6 +115,23 @@ def show_script_editor():
     console_window.activateWindow()
 
 
+def version_up():
+    """Save the current workfile as the next version."""
+    try:
+        from ayon_core.pipeline.workfile import save_next_version
+        save_next_version()
+    except ImportError:
+        # Backwards compatibility before ayon-core 1.5.0
+        from ayon_core.lib import version_up as _version_up
+        from ayon_core.pipeline import registered_host
+
+        host = registered_host()
+        current = host.get_current_workfile()
+        if current:
+            new_path = _version_up(current)
+            host.save_workfile(new_path)
+
+
 class ProcessLauncher(QtCore.QObject):
     """Launches webserver, connects to it, runs main thread."""
     route_name = "AfterEffects"
@@ -420,6 +437,13 @@ class AfterEffectsRoute(WebSocketRoute):
 
     async def sceneinventory_route(self):
         self._tool_route("sceneinventory")
+
+    async def version_up_route(self):
+        """Version up the current workfile."""
+        ProcessLauncher.execute_in_main_thread(version_up)
+
+        # Required return statement.
+        return "nothing"
 
     async def setresolution_route(self):
         self._settings_route(False, True)

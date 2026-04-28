@@ -97,11 +97,21 @@ class CollectAERender(publish.AbstractCollectRender):
 
             task_name = inst.data.get("task")
 
-            render_q = CollectAERender.get_stub().get_render_info(comp_id)
+            stub = CollectAERender.get_stub()
+            render_q = stub.get_render_info(comp_id)
             if not render_q:
-                raise PublishValidationError(
-                    "No file extension set in Render Queue"
+                self.log.info(
+                    "No Render Queue item for '%s', setting up "
+                    "H.264 output automatically.", comp_info.name
                 )
+                stub.setup_render_queue(comp_id)
+                render_q = stub.get_render_info(comp_id)
+                if not render_q:
+                    raise PublishValidationError(
+                        "Failed to setup Render Queue for '{}'. "
+                        "Add composition to Render Queue "
+                        "manually.".format(comp_info.name)
+                    )
             render_item = render_q[0]
 
             instance_families = inst.data.get("families", [])
