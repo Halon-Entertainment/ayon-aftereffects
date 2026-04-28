@@ -261,10 +261,38 @@ class ProcessLauncher(QtCore.QObject):
         )
 
         self._websocket_server = websocket_server = WebServerTool()
+
+        # If the default port is already occupied, an existing instance
+        # is likely running.  Try to forward the current context to it
+        # so the artist doesn't end up with stale task env vars (e.g.
+        # "previs" when they relaunched for "comp").
+        if websocket_server.port_occupied(
+            websocket_server.host_name, websocket_server.port
+        ):
+            self.log.info(
+                "Default port %s occupied — attempting context change "
+                "to existing instance.",
+                websocket_server.port,
+            )
+            try:
+                asyncio.run(
+                    websocket_server.send_context_change(self.route_name)
+                )
+                self.log.info("Context change sent, exiting.")
+                self.exit()
+                return
+            except Exception:
+                self.log.warning(
+                    "Could not send context change to port %s, "
+                    "falling back to alternative ports.",
+                    websocket_server.port,
+                    exc_info=True,
+                )
+
         port = self.find_available_port(websocket_server)
         if port is None:
             self.log.info(
-                "Server already running, sending actual context and exit."
+                "All ports occupied, sending context change and exit."
             )
             asyncio.run(websocket_server.send_context_change(self.route_name))
             self.exit()

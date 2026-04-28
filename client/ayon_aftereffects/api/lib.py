@@ -208,6 +208,12 @@ def create_shot_comp():
     shot = folder_path.rsplit("/", 1)[-1] if folder_path else "shot"
     task = os.environ.get("AYON_TASK_NAME", "comp")
 
+    log.info(
+        "Creating shot comp with context — folder_path: %s, task: %s",
+        folder_path,
+        task,
+    )
+
     stub = get_stub()
 
     base_name = f"{shot}_{task}_HLN"
