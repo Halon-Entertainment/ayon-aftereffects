@@ -7,7 +7,12 @@ import logging
 import pyblish
 from typing import Union
 
-from ayon_core.pipeline.context_tools import get_current_task_entity
+from ayon_core.pipeline.context_tools import (
+    get_current_project_name,
+    get_current_task_entity,
+)
+
+import ayon_api
 
 from .ws_stub import get_stub
 
@@ -193,11 +198,38 @@ def _get_next_version(stub, base_name):
     return f"v{max_version + 1:03d}"
 
 
+def _get_task_short_name(task_entity):
+    """Resolve the short name for a task from its task type.
+
+    Looks up the task type's ``shortName`` in the project's type
+    definitions.  Falls back to the task entity name if the type or
+    short name cannot be resolved.
+
+    Args:
+        task_entity (dict): Task entity from AYON API.
+
+    Returns:
+        str: Short name for the task (e.g. ``"comp"``).
+    """
+    task_type = task_entity.get("taskType")
+    if task_type:
+        project_name = get_current_project_name()
+        project = ayon_api.get_project(project_name, fields=["taskTypes"])
+        if project:
+            for tt in project.get("taskTypes", []):
+                if tt["name"] == task_type:
+                    short = tt.get("shortName")
+                    if short:
+                        return short
+                    break
+    return task_entity.get("name", os.environ.get("AYON_TASK_NAME", "comp"))
+
+
 def create_shot_comp():
     """Create a new composition with AYON task settings applied.
 
     Creates a comp following Halon anatomy naming:
-    ``<shot>_<task>_HLN_<version>`` (e.g. ``sh010_compositing_HLN_v001``).
+    ``<shot>_<task_short>_HLN_<version>`` (e.g. ``sh010_comp_HLN_v001``).
     Applies frame range, fps, and resolution from the task entity
     attributes automatically.
     """
@@ -206,7 +238,7 @@ def create_shot_comp():
 
     folder_path = os.environ.get("AYON_FOLDER_PATH", "")
     shot = folder_path.rsplit("/", 1)[-1] if folder_path else "shot"
-    task = os.environ.get("AYON_TASK_NAME", "comp")
+    task = _get_task_short_name(entity)
 
     log.info(
         "Creating shot comp with context — folder_path: %s, task: %s",
