@@ -116,20 +116,22 @@ def show_script_editor():
 
 
 def version_up():
-    """Save the current workfile as the next version."""
-    try:
-        from ayon_core.pipeline.workfile import save_next_version
-        save_next_version()
-    except ImportError:
-        # Backwards compatibility before ayon-core 1.5.0
-        from ayon_core.lib import version_up as _version_up
-        from ayon_core.pipeline import registered_host
+    """Save the current workfile as the next version.
 
-        host = registered_host()
-        current = host.get_current_workfile()
-        if current:
-            new_path = _version_up(current)
-            host.save_workfile(new_path)
+    Uses path-based version increment to ensure the new version stays
+    in the same task directory as the current workfile, regardless of
+    what the environment variables report as the current context.
+    """
+    from ayon_core.lib import version_up as _version_up
+    from ayon_core.pipeline import registered_host
+
+    host = registered_host()
+    current = host.get_current_workfile()
+    if not current:
+        return
+
+    new_path = _version_up(current)
+    host.save_workfile(new_path)
 
 
 class ProcessLauncher(QtCore.QObject):
