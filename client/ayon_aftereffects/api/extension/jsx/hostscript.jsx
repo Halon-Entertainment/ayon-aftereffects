@@ -892,6 +892,82 @@ function getAppVersion(){
     return _prepareSingleValue(app.version);
 }
 
+function setupRenderQueue(comp_id, template_name){
+    /**
+     * Add composition to Render Queue and apply a lossless output module.
+     *
+     * The render queue output is source material for ExtractReview, which
+     * transcodes it into delivery formats (H.264, DNxHD, etc.) via ffmpeg.
+     * To avoid double-compression quality loss, the render queue should
+     * output a lossless format.
+     *
+     * Only lossless image sequence formats (PNG, TIFF) are valid
+     * because ExtractReview only accepts extensions in its
+     * ``supported_exts`` set.  AVI ("Lossless" on Windows) is not
+     * supported and would be silently skipped.
+     *
+     * Search order (case-insensitive substring):
+     *   1. Match for requested template_name (default "PNG")
+     *   2. Fallback: any template containing "tiff"
+     *   3. Error if neither found
+     *
+     * Args:
+     *     comp_id (int): composition id
+     *     template_name (str): preferred template name (default "PNG")
+     * Returns:
+     *     SingleItemValue with the render queue item index, or error
+     */
+    var comp = app.project.itemByID(comp_id);
+    if (!comp || !(comp instanceof CompItem)){
+        return _prepareError("No composition found with id " + comp_id);
+    }
+
+    app.beginUndoGroup("Setup Render Queue");
+    try {
+        var rqItem = app.project.renderQueue.items.add(comp);
+        var om = rqItem.outputModule(1);
+        var templates = om.templates;
+
+        // Search for the requested template (substring, case-insensitive)
+        var matched = "";
+        var tiffFallback = "";
+        var needle = template_name.toLowerCase();
+        for (var t = 0; t < templates.length; t++){
+            var tLower = templates[t].toLowerCase();
+            if (tLower.indexOf(needle) !== -1){
+                matched = templates[t];
+                break;
+            }
+            if (!tiffFallback && tLower.indexOf("tiff") !== -1){
+                tiffFallback = templates[t];
+            }
+        }
+
+        var chosen = matched || tiffFallback;
+        if (!chosen){
+            app.endUndoGroup();
+            return _prepareError(
+                "No PNG or TIFF output module template found. "
+                + "Available templates: " + templates.join(", ")
+            );
+        }
+        om.applyTemplate(chosen);
+
+        app.endUndoGroup();
+
+        var result = {
+            "index": rqItem.index,
+            "template": chosen
+        };
+        return JSON.stringify({"result": JSON.stringify(result)});
+    } catch (error) {
+        app.endUndoGroup();
+        return _prepareError(
+            "Failed to setup render queue: " + error.toString()
+        );
+    }
+}
+
 function printMsg(msg){
     alert(msg);
 }
