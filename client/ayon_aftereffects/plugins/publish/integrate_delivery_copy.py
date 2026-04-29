@@ -49,6 +49,22 @@ class IntegrateDeliveryCopy(pyblish.api.InstancePlugin):
             )
             return
 
+        # Verify that roots referenced in the delivery template are
+        # configured in project anatomy.  Missing roots would cause
+        # IntegrateAsset's path validation to fail later.
+        delivery_templates = anatomy.templates.get("delivery", {})
+        required_roots = anatomy.root_names_from_templates(delivery_templates)
+        configured_roots = set(anatomy.roots.keys())
+        missing = required_roots - configured_roots
+        if missing:
+            self.log.warning(
+                "Delivery template references root(s) %s that are not "
+                "configured in project anatomy. Delivery copy will be "
+                "skipped to avoid a publish failure.",
+                ", ".join(sorted(missing)),
+            )
+            return
+
         representations = instance.data.get("representations")
         if not representations:
             return
