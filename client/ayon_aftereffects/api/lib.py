@@ -112,6 +112,13 @@ def get_entity_attributes(entity: dict) -> dict[str, Union[float, int]]:
     resolution_height = attrib.get("resolutionHeight", 0)
     duration = (frame_end - frame_start + 1) + handle_start + handle_end
 
+    if not fps:
+        log.warning(
+            "Entity has no fps attribute set (got %r). "
+            "Composition fps will not be updated — check AYON shot settings.",
+            fps,
+        )
+
     return {
         "fps": fps,
         "frameStart": frame_start,
@@ -149,6 +156,14 @@ def set_settings(
         frame_start = settings["frameStart"] - settings["handleStart"]
         frames_duration = settings["duration"]
         fps = settings["fps"]
+        if not fps:
+            log.warning(
+                "Entity fps is 0 or missing — skipping fps/frame update. "
+                "Check AYON shot settings."
+            )
+            fps = None
+            frame_start = None
+            frames_duration = None
         msg += f"frame start:{frame_start}, duration:{frames_duration}, "\
                f"fps:{fps}"
     if resolution:
@@ -251,6 +266,13 @@ def create_shot_comp():
     base_name = f"{shot}_{task}_HLN"
     version = _get_next_version(stub, base_name)
     comp_name = f"{base_name}_{version}"
+
+    if not settings["fps"]:
+        log.warning(
+            "Entity fps is 0 or missing for '%s' — composition fps will "
+            "not be set. Check AYON shot settings for this folder.",
+            folder_path,
+        )
 
     comp_id = stub.add_item(comp_name, "COMP")
 

@@ -437,10 +437,17 @@ function setCompProperties(comp_id, frameStart, framesCount, frameRate,
     }
 
     app.beginUndoGroup('change comp properties');
-        if (frameStart && framesCount && frameRate){
-            comp.displayStartFrame = frameStart;
-            comp.duration = framesCount / frameRate;
+        // Set frame properties independently so a valid frameRate is applied
+        // even when frameStart is legitimately 0. frameStart uses null/undefined
+        // check (0 is valid); frameRate and framesCount must be > 0.
+        if (frameRate > 0){
             comp.frameRate = frameRate;
+        }
+        if (framesCount > 0 && frameRate > 0){
+            comp.duration = framesCount / frameRate;
+        }
+        if (frameStart !== null && frameStart !== undefined){
+            comp.displayStartFrame = frameStart;
         }
         if (width && height){
             var widthOld = comp.width;
@@ -670,6 +677,9 @@ function importBackground(comp_id, composition_name, files_to_import){
             if (!comp){
                 folder = app.project.items.addFolder(composition_name);
                 imported_ids.push(folder.id);
+                // TODO: 26.7fps is hardcoded here; importBackground() does not
+                // receive fps from Python. Fix by passing fps param from
+                // the Python caller (separate ticket from ENG-4290).
                 comp = app.project.items.addComp(composition_name, item.width,
                     item.height, item.pixelAspect,
                     1, 26.7);  // hardcode defaults
