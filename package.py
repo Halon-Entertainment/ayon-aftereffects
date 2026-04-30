@@ -1,5 +1,6 @@
 name = "aftereffects"
 title = "AfterEffects"
+# Halon fork of ynput/ayon-aftereffects (forked from 0.2.12)
 version = "1.0.0"
 app_host_name = "aftereffects"
 client_dir = "ayon_aftereffects"
