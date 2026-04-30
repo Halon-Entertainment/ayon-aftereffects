@@ -1,7 +1,7 @@
 AfterEffects Addon (Halon Fork)
 ================================
 
-This is Halon Entertainment's fork of the [Ynput ayon-aftereffects](https://github.com/ynput/ayon-aftereffects) addon. The major version was incremented to **1.x** to clearly distinguish Halon builds from upstream Ynput releases (0.x).
+This is Halon Entertainment's fork of the [Ynput ayon-aftereffects](https://github.com/ynput/ayon-aftereffects) addon, forked from upstream version **0.2.12**. The major version was incremented to **1.x** to clearly distinguish Halon builds from upstream Ynput releases (0.x).
 
 ## Halon-specific changes
 
