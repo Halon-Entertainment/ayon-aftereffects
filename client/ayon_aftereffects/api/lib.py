@@ -7,7 +7,12 @@ import logging
 import pyblish
 from typing import Union
 
-from ayon_core.pipeline.context_tools import get_current_task_entity
+from ayon_core.pipeline.context_tools import (
+    get_current_project_name,
+    get_current_task_entity,
+)
+
+import ayon_api
 
 from .ws_stub import get_stub
 
@@ -107,6 +112,13 @@ def get_entity_attributes(entity: dict) -> dict[str, Union[float, int]]:
     resolution_height = attrib.get("resolutionHeight", 0)
     duration = (frame_end - frame_start + 1) + handle_start + handle_end
 
+    if not fps:
+        log.warning(
+            "Entity has no fps attribute set (got %r). "
+            "Composition fps will not be updated — check AYON shot settings.",
+            fps,
+        )
+
     return {
         "fps": fps,
         "frameStart": frame_start,
@@ -144,6 +156,14 @@ def set_settings(
         frame_start = settings["frameStart"] - settings["handleStart"]
         frames_duration = settings["duration"]
         fps = settings["fps"]
+        if not fps:
+            log.warning(
+                "Entity fps is 0 or missing — skipping fps/frame update. "
+                "Check AYON shot settings."
+            )
+            fps = None
+            frame_start = None
+            frames_duration = None
         msg += f"frame start:{frame_start}, duration:{frames_duration}, "\
                f"fps:{fps}"
     if resolution:
@@ -166,6 +186,114 @@ def set_settings(
                                  fps, width, height)
         if print_msg:
             stub.print_msg(msg)
+
+
+def _get_next_version(stub, base_name):
+    """Determine the next version number for a comp name.
+
+    Scans existing compositions for names matching ``base_name_v###``
+    and returns the next version string (e.g. ``v002``).  Returns
+    ``v001`` when no matching comps exist.
+
+    Args:
+        stub (AfterEffectsServerStub): Connection stub.
+        base_name (str): Comp name prefix without version suffix.
+
+    Returns:
+        str: Version string like ``v001``.
+    """
+    version_re = re.compile(
+        r"^" + re.escape(base_name) + r"_v(\d{3})$", re.IGNORECASE
+    )
+    max_version = 0
+    for comp in stub.get_items(comps=True, folders=False, footages=False):
+        match = version_re.match(comp.name)
+        if match:
+            max_version = max(max_version, int(match.group(1)))
+    return f"v{max_version + 1:03d}"
+
+
+def _get_task_short_name(task_entity):
+    """Resolve the short name for a task from its task type.
+
+    Looks up the task type's ``shortName`` in the project's type
+    definitions.  Falls back to the task entity name if the type or
+    short name cannot be resolved.
+
+    Args:
+        task_entity (dict): Task entity from AYON API.
+
+    Returns:
+        str: Short name for the task (e.g. ``"comp"``).
+    """
+    task_type = task_entity.get("taskType")
+    if task_type:
+        project_name = get_current_project_name()
+        project = ayon_api.get_project(project_name, fields=["taskTypes"])
+        if project:
+            for tt in project.get("taskTypes", []):
+                if tt["name"] == task_type:
+                    short = tt.get("shortName")
+                    if short:
+                        return short
+                    break
+    return task_entity.get("name", os.environ.get("AYON_TASK_NAME", "comp"))
+
+
+def create_shot_comp():
+    """Create a new composition with AYON task settings applied.
+
+    Creates a comp following Halon anatomy naming:
+    ``<shot>_<task_short>_HLN_<version>`` (e.g. ``sh010_comp_HLN_v001``).
+    Applies frame range, fps, and resolution from the task entity
+    attributes automatically.
+    """
+    entity = get_current_task_entity()
+    settings = get_entity_attributes(entity)
+
+    folder_path = os.environ.get("AYON_FOLDER_PATH", "")
+    shot = folder_path.rsplit("/", 1)[-1] if folder_path else "shot"
+    task = _get_task_short_name(entity)
+
+    log.info(
+        "Creating shot comp with context — folder_path: %s, task: %s",
+        folder_path,
+        task,
+    )
+
+    stub = get_stub()
+
+    base_name = f"{shot}_{task}_HLN"
+    version = _get_next_version(stub, base_name)
+    comp_name = f"{base_name}_{version}"
+
+    if not settings["fps"]:
+        log.warning(
+            "Entity fps is 0 or missing for '%s' — composition fps will "
+            "not be set. Check AYON shot settings for this folder.",
+            folder_path,
+        )
+
+    comp_id = stub.add_item(comp_name, "COMP")
+
+    set_settings(
+        frames=True,
+        resolution=True,
+        comp_ids=[comp_id],
+        print_msg=False,
+        entity=entity,
+    )
+
+    stub.setup_render_queue(comp_id)
+
+    msg = (
+        f"Created comp '{comp_name}' — "
+        f"fps:{settings['fps']}, "
+        f"frames:{settings['frameStart']}-{settings['frameEnd']}, "
+        f"res:{settings['resolutionWidth']}x{settings['resolutionHeight']}"
+    )
+    log.info(msg)
+    stub.print_msg(msg)
 
 
 def find_close_plugin(close_plugin_name, log):

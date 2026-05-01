@@ -115,6 +115,25 @@ def show_script_editor():
     console_window.activateWindow()
 
 
+def version_up():
+    """Save the current workfile as the next version.
+
+    Uses path-based version increment to ensure the new version stays
+    in the same task directory as the current workfile, regardless of
+    what the environment variables report as the current context.
+    """
+    from ayon_core.lib import version_up as _version_up
+    from ayon_core.pipeline import registered_host
+
+    host = registered_host()
+    current = host.get_current_workfile()
+    if not current:
+        return
+
+    new_path = _version_up(current)
+    host.save_workfile(new_path)
+
+
 class ProcessLauncher(QtCore.QObject):
     """Launches webserver, connects to it, runs main thread."""
     route_name = "AfterEffects"
@@ -393,6 +412,13 @@ class AfterEffectsRoute(WebSocketRoute):
     async def sceneinventory_route(self):
         self._tool_route("sceneinventory")
 
+    async def version_up_route(self):
+        """Version up the current workfile."""
+        ProcessLauncher.execute_in_main_thread(version_up)
+
+        # Required return statement.
+        return "nothing"
+
     async def setresolution_route(self):
         self._settings_route(False, True)
 
@@ -428,6 +454,14 @@ class AfterEffectsRoute(WebSocketRoute):
                                            resolution)
 
         ProcessLauncher.execute_in_main_thread(partial_method)
+
+        # Required return statement.
+        return "nothing"
+
+    async def create_shot_comp_route(self):
+        from .lib import create_shot_comp
+
+        ProcessLauncher.execute_in_main_thread(create_shot_comp)
 
         # Required return statement.
         return "nothing"

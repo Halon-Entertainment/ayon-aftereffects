@@ -25,6 +25,76 @@
 
 <title></title>
     <script src="js/libs/jquery-2.0.2.min.js"></script>
+    <script type=text/javascript>
+      (function () {
+        function toFsPath(path) {
+          if (!path) {
+            return "";
+          }
+          var normalized = path.toString();
+          if (normalized.indexOf("file:///") === 0) {
+            normalized = decodeURI(normalized.substring(8));
+          } else if (normalized.indexOf("file://") === 0) {
+            normalized = decodeURI(normalized.substring(7));
+          }
+          return normalized.replace(/\//g, "\\");
+        }
+
+        function getLogsDir() {
+          var fallback = "%APPDATA%\\Adobe\\After Effects\\Logs";
+          if (!window.__adobe_cep__) {
+            return fallback;
+          }
+          var userData = window.__adobe_cep__.getSystemPath("userData");
+          userData = toFsPath(userData);
+          if (!userData) {
+            return fallback;
+          }
+          return userData + "\\Adobe\\After Effects\\Logs";
+        }
+
+        function writeStartupError(message, errorObj) {
+          try {
+            if (!window.cep || !window.cep.fs) {
+              return;
+            }
+            var logsDir = getLogsDir();
+            window.cep.fs.makedir(logsDir);
+
+            var now = new Date();
+            var isoDate = now.toISOString().replace(/[:.]/g, "-");
+            var logPath = logsDir + "\\ayon-aftereffects-panel-error-" + isoDate + ".log";
+            var stack = "";
+            if (errorObj && errorObj.stack) {
+              stack = errorObj.stack;
+            }
+            var payload = [
+              "timestamp=" + now.toISOString(),
+              "message=" + message,
+              "stack=" + stack
+            ].join("\n");
+            window.cep.fs.writeFile(logPath, payload);
+          } catch (ignoreError) {
+          }
+        }
+
+        window.addEventListener("error", function (event) {
+          if (!event) {
+            writeStartupError("Unknown startup error", null);
+            return;
+          }
+          writeStartupError(
+            "Uncaught error: " + event.message + " (" + event.filename + ":" + event.lineno + ":" + event.colno + ")",
+            event.error
+          );
+        });
+
+        window.addEventListener("unhandledrejection", function (event) {
+          var reason = event && event.reason ? event.reason.toString() : "unknown";
+          writeStartupError("Unhandled promise rejection: " + reason, event.reason);
+        });
+      }());
+    </script>
 
     <script type=text/javascript>
             $(function() {
@@ -69,6 +139,17 @@
                 });
               });
             });
+    </script>
+
+    <script type=text/javascript>
+      $(function() {
+        $("a#create-shot-comp-button").bind("click", function() {
+          RPC.call('AfterEffects.create_shot_comp_route').then(function (data) {
+          }, function (error) {
+              alert(error);
+          });
+        });
+      });
     </script>
 
     <script type=text/javascript>
@@ -149,6 +230,17 @@
     </script>
 
     <script type=text/javascript>
+      $(function() {
+        $("a#versionup-button").bind("click", function() {
+          RPC.call('AfterEffects.version_up_route').then(function (data) {
+          }, function (error) {
+              alert(error);
+          });
+        });
+      });
+    </script>
+
+    <script type=text/javascript>
             $(function() {
               $("a#experimental-button").bind("click", function() {
                 RPC.call('AfterEffects.experimental_tools_route').then(function (data) {
@@ -167,7 +259,7 @@
     <div id="content">
 
         <div>
-            <div></div><a href=# id=workfiles-button><button class="hostFontSize">Workfiles...</button></a></div>
+            <div><a href=# id=workfiles-button><button class="hostFontSize">Workfiles...</button></a></div>
             <div><a href=# id=loader-button><button class="hostFontSize">Load...</button></a></div>
             <div><a href=# id=publish-button><button class="hostFontSize">Publish...</button></a></div>
             <div><a href=# id=sceneinventory-button><button class="hostFontSize">Manage...</button></a></div>
@@ -182,6 +274,16 @@
             <div><a href=# id=separator3><button class="hostFontSize">&nbsp;</button></a></div>
             <div><a href=# id=script-editor-button><button class="hostFontSize">Script Editor</button></a></div>
             <div><a href=# id=experimental-button><button class="hostFontSize">Experimental Tools...</button></a></div>
+            <div style="text-align: center;">
+              <a href=#>
+                <button class="hostFontSize" disabled>
+                  &mdash; HALON &mdash;
+                </button>
+              </a>
+            </div>
+ 
+            <div><a href=# id=create-shot-comp-button><button class="hostFontSize">New Shot Comp</button></a></div>
+            <div><a href=# id=versionup-button><button class="hostFontSize">Version Up</button></a></div>
         </div>
 
     </div>
