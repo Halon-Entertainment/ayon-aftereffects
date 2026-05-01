@@ -37,7 +37,7 @@ class RenderCreator(Creator):
     # Settings
     mark_for_review = True
     force_setting_values = True
-    rename_comp_to_product_name = True
+    rename_comp_to_product_name = False
 
     def create(self, product_name, data, pre_create_data):
         stub = api.get_stub()  # only after After Effects is up

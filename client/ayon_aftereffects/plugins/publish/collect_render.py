@@ -170,6 +170,17 @@ class CollectAERender(publish.AbstractCollectRender):
             instance.comp_id = comp_id
             instance.orig_comp_name = inst.data.get("orig_comp_name")
 
+            # Carry over entity references so CollectAnatomyInstanceData
+            # can populate folder/task data for burnin templates.
+            for key in (
+                "folderEntity",
+                "taskEntity",
+                "burninDataMembers",
+            ):
+                value = inst.data.get(key)
+                if value is not None:
+                    instance.data[key] = value
+
             creator_attributes = inst.data["creator_attributes"]
             if creator_attributes["render_target"] == "local":
                 # for local renders

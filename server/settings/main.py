@@ -20,20 +20,29 @@ class AfterEffectsSettings(BaseSettingsModel):
     )
 
     imageio: AfterEffectsImageIOModel = SettingsField(
-        default_factory=AfterEffectsImageIOModel, title="OCIO config"
+        default_factory=AfterEffectsImageIOModel,
+        title="OCIO config",
+        description="OpenColorIO configuration for After Effects color management.",
     )
     create: AfterEffectsCreatorPlugins = SettingsField(
-        default_factory=AfterEffectsCreatorPlugins, title="Creator plugins"
+        default_factory=AfterEffectsCreatorPlugins,
+        title="Creator plugins",
+        description="Settings for instance creators (render, workfile).",
     )
     publish: AfterEffectsPublishPlugins = SettingsField(
-        default_factory=AfterEffectsPublishPlugins, title="Publish plugins"
+        default_factory=AfterEffectsPublishPlugins,
+        title="Publish plugins",
+        description="Settings for publish validators and extractors.",
     )
     workfile_builder: WorkfileBuilderPlugin = SettingsField(
-        default_factory=WorkfileBuilderPlugin, title="Workfile Builder"
+        default_factory=WorkfileBuilderPlugin,
+        title="Workfile Builder",
+        description="Automatic workfile creation on first launch.",
     )
     templated_workfile_build: TemplatedWorkfileBuildModel = SettingsField(
         default_factory=TemplatedWorkfileBuildModel,
         title="Templated Workfile Build Settings",
+        description="Build workfiles from templates with placeholder loading.",
     )
 
 
@@ -44,7 +53,7 @@ DEFAULT_AFTEREFFECTS_SETTING = {
             "mark_for_review": True,
             "default_variants": ["Main"],
             "force_setting_values": True,
-            "rename_comp_to_product_name": True,
+            "rename_comp_to_product_name": False,
         }
     },
     "publish": AE_PUBLISH_PLUGINS_DEFAULTS,
