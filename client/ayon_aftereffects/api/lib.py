@@ -263,7 +263,7 @@ def create_shot_comp():
 
     stub = get_stub()
 
-    base_name = f"{shot}_{task.title()}_HAL"
+    base_name = f"{shot}_{task}_HAL"
     version = _get_next_version(stub, base_name)
     comp_name = f"{base_name}_{version}"
 
