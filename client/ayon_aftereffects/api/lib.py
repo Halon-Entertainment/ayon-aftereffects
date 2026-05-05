@@ -244,7 +244,7 @@ def create_shot_comp():
     """Create a new composition with AYON task settings applied.
 
     Creates a comp following Halon anatomy naming:
-    ``<shot>_<task_short>_HLN_<version>`` (e.g. ``sh010_comp_HLN_v001``).
+    ``<shot>_<Task>_HAL_<version>`` (e.g. ``sh010_Comp_HAL_v001``).
     Applies frame range, fps, and resolution from the task entity
     attributes automatically.
     """
@@ -263,7 +263,7 @@ def create_shot_comp():
 
     stub = get_stub()
 
-    base_name = f"{shot}_{task}_HLN"
+    base_name = f"{shot}_{task.title()}_HAL"
     version = _get_next_version(stub, base_name)
     comp_name = f"{base_name}_{version}"
 
