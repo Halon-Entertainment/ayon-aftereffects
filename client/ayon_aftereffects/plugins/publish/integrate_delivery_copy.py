@@ -90,6 +90,10 @@ class IntegrateDeliveryCopy(pyblish.api.InstancePlugin):
             repre_data = copy.deepcopy(anatomy_data)
             repre_data["representation"] = repre["name"]
             repre_data["ext"] = repre["ext"]
+            variant = instance.data.get("variant", "")
+            if variant.lower() == "main":
+                variant = ""
+            repre_data["variant"] = variant
 
             files = repre["files"]
             if isinstance(files, str):
