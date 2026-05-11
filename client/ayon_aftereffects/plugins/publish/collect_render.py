@@ -176,6 +176,7 @@ class CollectAERender(publish.AbstractCollectRender):
                 "folderEntity",
                 "taskEntity",
                 "burninDataMembers",
+                "variant",
             ):
                 value = inst.data.get(key)
                 if value is not None:
