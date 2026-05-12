@@ -175,6 +175,11 @@ class CollectAERender(publish.AbstractCollectRender):
             # folderEntity, taskEntity, burninDataMembers are already on
             # the source pyblish instance (inst) and survive because
             # AbstractCollectRender.process() reuses source_instance.
+            # Inject variant into burninDataMembers so burnin templates
+            # can resolve {variant}.
+            burnin_members = inst.data.get("burninDataMembers") or {}
+            burnin_members["variant"] = inst.data.get("variant", "")
+            inst.data["burninDataMembers"] = burnin_members
 
             creator_attributes = inst.data["creator_attributes"]
             if creator_attributes["render_target"] == "local":
