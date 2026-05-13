@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 """Package declaring AYON addon 'aftereffects' version."""
-__version__ = "0.2.19"
+__version__ = "1.0.3+editorial"
