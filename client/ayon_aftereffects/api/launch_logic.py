@@ -7,10 +7,7 @@ import asyncio
 import functools
 import traceback
 
-from wsrpc_aiohttp import (
-    WebSocketRoute,
-    WebSocketAsync
-)
+from wsrpc_aiohttp import WebSocketRoute, WebSocketAsync
 
 from qtpy import QtCore
 
@@ -53,7 +50,7 @@ def main(*subprocess_args):
     env_workfiles_on_launch = os.getenv(
         "AYON_AFTEREFFECTS_WORKFILES_ON_LAUNCH",
         # Backwards compatibility
-        os.getenv("AVALON_AFTEREFFECTS_WORKFILES_ON_LAUNCH", True)
+        os.getenv("AVALON_AFTEREFFECTS_WORKFILES_ON_LAUNCH", True),
     )
     workfiles_on_launch = env_value_to_bool(value=env_workfiles_on_launch)
 
@@ -107,9 +104,10 @@ def show_script_editor():
         console_window = ConsoleInterpreterWindow(controller)
         console_window.setWindowTitle("Python Script Editor - AFX")
         console_window.setWindowFlags(
-            console_window.windowFlags() |
-            QtCore.Qt.Dialog |
-            QtCore.Qt.WindowMinimizeButtonHint)
+            console_window.windowFlags()
+            | QtCore.Qt.Dialog
+            | QtCore.Qt.WindowMinimizeButtonHint
+        )
     console_window.show()
     console_window.raise_()
     console_window.activateWindow()
@@ -121,9 +119,19 @@ def version_up():
     Uses path-based version increment to ensure the new version stays
     in the same task directory as the current workfile, regardless of
     what the environment variables report as the current context.
+
+    Registers the new workfile entity in the AYON database so it
+    appears in the launcher workfile browser.
     """
-    from ayon_core.lib import version_up as _version_up
+    from ayon_core.lib import (
+        version_up as _version_up,
+        get_version_from_path,
+    )
     from ayon_core.pipeline import registered_host
+    from ayon_core.pipeline.context_tools import (
+        get_current_folder_entity,
+        get_current_task_entity,
+    )
 
     host = registered_host()
     current = host.get_current_workfile()
@@ -131,11 +139,29 @@ def version_up():
         return
 
     new_path = _version_up(current)
-    host.save_workfile(new_path)
+
+    folder_entity = get_current_folder_entity()
+    task_entity = get_current_task_entity()
+    if folder_entity and task_entity:
+        version_str = get_version_from_path(new_path)
+        version = int(version_str) if version_str else None
+        host.save_workfile_with_context(
+            new_path,
+            folder_entity,
+            task_entity,
+            version=version,
+        )
+    else:
+        log.warning(
+            "Could not resolve context entities for workfile "
+            "registration. File saved but not visible in launcher."
+        )
+        host.save_workfile(new_path)
 
 
 class ProcessLauncher(QtCore.QObject):
     """Launches webserver, connects to it, runs main thread."""
+
     route_name = "AfterEffects"
     _main_thread_callbacks = collections.deque()
 
@@ -166,8 +192,9 @@ class ProcessLauncher(QtCore.QObject):
     @property
     def log(self):
         if self._log is None:
-            self._log = Logger.get_logger("{}-launcher".format(
-                self.route_name))
+            self._log = Logger.get_logger(
+                "{}-launcher".format(self.route_name)
+            )
         return self._log
 
     @property
@@ -189,7 +216,6 @@ class ProcessLauncher(QtCore.QObject):
             return False
 
         try:
-
             _stub = get_stub()
             if _stub:
                 return True
@@ -210,7 +236,7 @@ class ProcessLauncher(QtCore.QObject):
         self._start_process_timer.start()
 
     def exit(self):
-        """ Exit whole application. """
+        """Exit whole application."""
         if self._start_process_timer.isActive():
             self._start_process_timer.stop()
         if self._loop_timer.isActive():
@@ -266,8 +292,7 @@ class ProcessLauncher(QtCore.QObject):
             self._start_process_timer.stop()
             self._loop_timer.start()
         elif (
-            not self.is_process_running
-            or not self.websocket_server_is_running
+            not self.is_process_running or not self.websocket_server_is_running
         ):
             self.exit()
 
@@ -294,9 +319,7 @@ class ProcessLauncher(QtCore.QObject):
         # Add after effects route to websocket handler
 
         print("Adding {} route".format(self.route_name))
-        WebSocketAsync.add_route(
-            self.route_name, AfterEffectsRoute
-        )
+        WebSocketAsync.add_route(self.route_name, AfterEffectsRoute)
 
         self.log.info(
             "Starting websocket server for host communication at "
@@ -314,8 +337,7 @@ class ProcessLauncher(QtCore.QObject):
         alternative_ports = list(range(8097, 8110))
         alternative_index = 0
         while websocket_server.port_occupied(
-            websocket_server.host_name,
-            websocket_server.port
+            websocket_server.host_name, websocket_server.port
         ):
             if alternative_index > len(alternative_ports):
                 return None
@@ -347,7 +369,7 @@ class ProcessLauncher(QtCore.QObject):
                 self._subprocess_args,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                env=environ
+                env=environ,
             )
         except Exception:
             self.log.info("exce", exc_info=True)
@@ -356,11 +378,12 @@ class ProcessLauncher(QtCore.QObject):
 
 class AfterEffectsRoute(WebSocketRoute):
     """
-        One route, mimicking external application (like Harmony, etc).
-        All functions could be called from client.
-        'do_notify' function calls function on the client - mimicking
-            notification after long running job on the server or similar
+    One route, mimicking external application (like Harmony, etc).
+    All functions could be called from client.
+    'do_notify' function calls function on the client - mimicking
+        notification after long running job on the server or similar
     """
+
     instance = None
 
     def init(self, **kwargs):
@@ -378,12 +401,12 @@ class AfterEffectsRoute(WebSocketRoute):
     # client functions
     async def set_context(self, project, folder, task):
         """
-            Sets 'project', 'folder' and 'task' to envs, eg. setting context
+        Sets 'project', 'folder' and 'task' to envs, eg. setting context
 
-            Args:
-                project (str)
-                folder (str)
-                task (str)
+        Args:
+            project (str)
+            folder (str)
+            task (str)
         """
         log.info("Setting context change")
         log.info("project {} folder {} ".format(project, folder))
@@ -395,9 +418,11 @@ class AfterEffectsRoute(WebSocketRoute):
             os.environ["AYON_TASK_NAME"] = task
 
     async def read(self):
-        log.debug("aftereffects.read client calls server server calls "
-                  "aftereffects client")
-        return await self.socket.call('aftereffects.read')
+        log.debug(
+            "aftereffects.read client calls server server calls "
+            "aftereffects client"
+        )
+        return await self.socket.call("aftereffects.read")
 
     # panel routes for tools
     async def workfiles_route(self):
@@ -440,8 +465,7 @@ class AfterEffectsRoute(WebSocketRoute):
     def _tool_route(self, _tool_name):
         """The address accessed when clicking on the buttons."""
 
-        partial_method = functools.partial(show_tool_by_name,
-                                           _tool_name)
+        partial_method = functools.partial(show_tool_by_name, _tool_name)
 
         ProcessLauncher.execute_in_main_thread(partial_method)
 
@@ -449,9 +473,7 @@ class AfterEffectsRoute(WebSocketRoute):
         return "nothing"
 
     def _settings_route(self, frames, resolution):
-        partial_method = functools.partial(set_settings,
-                                           frames,
-                                           resolution)
+        partial_method = functools.partial(set_settings, frames, resolution)
 
         ProcessLauncher.execute_in_main_thread(partial_method)
 
@@ -467,8 +489,10 @@ class AfterEffectsRoute(WebSocketRoute):
         return "nothing"
 
     def create_placeholder_route(self):
-        from ayon_aftereffects.api.workfile_template_builder import \
-            create_placeholder
+        from ayon_aftereffects.api.workfile_template_builder import (
+            create_placeholder,
+        )
+
         partial_method = functools.partial(create_placeholder)
 
         ProcessLauncher.execute_in_main_thread(partial_method)
@@ -477,8 +501,10 @@ class AfterEffectsRoute(WebSocketRoute):
         return "nothing"
 
     def update_placeholder_route(self):
-        from ayon_aftereffects.api.workfile_template_builder import \
-            update_placeholder
+        from ayon_aftereffects.api.workfile_template_builder import (
+            update_placeholder,
+        )
+
         partial_method = functools.partial(update_placeholder)
 
         ProcessLauncher.execute_in_main_thread(partial_method)
@@ -487,8 +513,10 @@ class AfterEffectsRoute(WebSocketRoute):
         return "nothing"
 
     def build_workfile_template_route(self):
-        from ayon_aftereffects.api.workfile_template_builder import \
-            build_workfile_template
+        from ayon_aftereffects.api.workfile_template_builder import (
+            build_workfile_template,
+        )
+
         partial_method = functools.partial(build_workfile_template)
 
         ProcessLauncher.execute_in_main_thread(partial_method)
