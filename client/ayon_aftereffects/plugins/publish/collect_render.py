@@ -25,6 +25,7 @@ class AERenderInstance(RenderInstance):
     app_version: str = attr.ib(default=None)
     publish_attributes: dict[str, Any] = attr.ib(default={})
     render_queue_file_paths: list[str] = attr.ib(default=[])
+    variant: str = attr.ib(default="")
 
 
 class CollectAERender(publish.AbstractCollectRender):
@@ -158,6 +159,7 @@ class CollectAERender(publish.AbstractCollectRender):
                 render_queue_file_paths=[item.file_name for item in render_q],
                 # The source instance this render instance replaces
                 source_instance=inst,
+                variant=inst.data.get("variant", ""),
             )
 
             comp = compositions_by_id.get(comp_id)
@@ -170,16 +172,17 @@ class CollectAERender(publish.AbstractCollectRender):
             instance.comp_id = comp_id
             instance.orig_comp_name = inst.data.get("orig_comp_name")
 
-            # Carry over entity references so CollectAnatomyInstanceData
-            # can populate folder/task data for burnin templates.
-            for key in (
-                "folderEntity",
-                "taskEntity",
-                "burninDataMembers",
-            ):
-                value = inst.data.get(key)
-                if value is not None:
-                    instance.data[key] = value
+            # folderEntity, taskEntity, burninDataMembers are already on
+            # the source pyblish instance (inst) and survive because
+            # AbstractCollectRender.process() reuses source_instance.
+            # Inject variant into burninDataMembers so burnin templates
+            # can resolve {variant}.
+            burnin_members = inst.data.get("burninDataMembers") or {}
+            variant = inst.data.get("variant", "")
+            if variant.lower() == "main":
+                variant = ""
+            burnin_members["variant"] = variant
+            inst.data["burninDataMembers"] = burnin_members
 
             creator_attributes = inst.data["creator_attributes"]
             if creator_attributes["render_target"] == "local":
