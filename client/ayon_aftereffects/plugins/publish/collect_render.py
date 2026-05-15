@@ -178,7 +178,10 @@ class CollectAERender(publish.AbstractCollectRender):
             # Inject variant into burninDataMembers so burnin templates
             # can resolve {variant}.
             burnin_members = inst.data.get("burninDataMembers") or {}
-            burnin_members["variant"] = inst.data.get("variant", "")
+            variant = inst.data.get("variant", "")
+            if variant.lower() == "main":
+                variant = ""
+            burnin_members["variant"] = variant
             inst.data["burninDataMembers"] = burnin_members
 
             creator_attributes = inst.data["creator_attributes"]
