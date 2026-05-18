@@ -97,6 +97,7 @@ class ValidateSceneSettings(
             expected_settings.pop('frameEnd', None)
             expected_settings.pop('handleStart', None)
             expected_settings.pop('handleEnd', None)
+            expected_settings.pop('duration', None)
 
         # handle case where ftrack uses only two decimal places
         # 23.976023976023978 vs. 23.98

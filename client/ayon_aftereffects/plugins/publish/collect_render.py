@@ -94,7 +94,20 @@ class CollectAERender(publish.AbstractCollectRender):
                 round(comp_info.frameStart + comp_info.framesDuration) - 1
             )
             fps = comp_info.frameRate
-            # TODO add resolution when supported by extension
+
+            # Use frame range from creator attributes if artist overrode
+            # them in the Publisher UI. Fall back to comp values for
+            # instances created before this feature was added.
+            creator_attrs = inst.data.get("creator_attributes", {})
+            attr_start = creator_attrs.get("frame_start")
+            attr_end = creator_attrs.get("frame_end")
+            if (
+                attr_start is not None
+                and attr_end is not None
+                and (attr_start != 0 or attr_end != 0)
+            ):
+                frame_start = attr_start
+                frame_end = attr_end
 
             task_name = inst.data.get("task")
 

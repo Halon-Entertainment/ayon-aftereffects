@@ -1,6 +1,6 @@
 import re
 
-from ayon_core.lib import BoolDef, UISeparatorDef, EnumDef
+from ayon_core.lib import BoolDef, UISeparatorDef, EnumDef, NumberDef
 from ayon_core.pipeline import (
     Creator,
     CreatedInstance,
@@ -66,12 +66,23 @@ class RenderCreator(Creator):
                                 len(comps) > 1)
 
         # Transfer certain attributes to creator attributes
-        creator_attributes = {
+        base_creator_attributes = {
             "render_target": pre_create_data["render_target"],
-            "mark_for_review": pre_create_data["mark_for_review"]
+            "mark_for_review": pre_create_data["mark_for_review"],
         }
 
         for comp in comps:
+            comp_info = stub.get_comp_properties(comp.id)
+            comp_frame_start = comp_info.frameStart
+            comp_frame_end = (
+                round(comp_info.frameStart + comp_info.framesDuration) - 1
+            )
+            creator_attributes = {
+                **base_creator_attributes,
+                "frame_start": comp_frame_start,
+                "frame_end": comp_frame_end,
+            }
+
             composition_name = re.sub(
                 "[^{}]+".format(PRODUCT_NAME_ALLOWED_SYMBOLS),
                 "",
@@ -164,7 +175,28 @@ class RenderCreator(Creator):
                 "mark_for_review",
                 label="Review",
                 default=False
-            )
+            ),
+            UISeparatorDef(),
+            NumberDef(
+                "frame_start",
+                label="Frame Start",
+                default=0,
+                decimals=0,
+                tooltip=(
+                    "Start frame for publish. Populated from composition "
+                    "when instance is created. Edit to override."
+                ),
+            ),
+            NumberDef(
+                "frame_end",
+                label="Frame End",
+                default=0,
+                decimals=0,
+                tooltip=(
+                    "End frame for publish. Populated from composition "
+                    "when instance is created. Edit to override."
+                ),
+            ),
         ]
 
     def collect_instances(self):
