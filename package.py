@@ -1,7 +1,7 @@
 name = "aftereffects"
 title = "AfterEffects"
 # Halon fork of ynput/ayon-aftereffects (forked from 0.2.12)
-version = "1.0.6+saveas"
+version = "1.0.6"
 app_host_name = "aftereffects"
 client_dir = "ayon_aftereffects"
 project_can_override_addon_version = True
