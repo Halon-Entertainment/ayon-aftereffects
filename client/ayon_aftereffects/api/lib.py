@@ -254,9 +254,6 @@ def create_shot_comp():
 
     stub.setup_render_queue(comp_id)
 
-    from ayon_aftereffects.api.launch_logic import version_up
-    version_up()
-
     msg = (
         f"Created comp '{comp_name}' — "
         f"fps:{settings['fps']}, "
