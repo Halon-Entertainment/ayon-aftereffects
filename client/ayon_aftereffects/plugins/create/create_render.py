@@ -1,6 +1,6 @@
 import re
 
-from ayon_core.lib import BoolDef, UISeparatorDef, EnumDef, NumberDef
+from ayon_core.lib import BoolDef, UISeparatorDef, EnumDef, NumberDef, TextDef
 from ayon_core.pipeline import (
     Creator,
     CreatedInstance,
@@ -27,6 +27,9 @@ class RenderCreator(Creator):
     icon = "eye"
 
     create_allow_context_change = True
+
+    KEY_LENS_OVERRIDE_ENABLED = "lens_override_enabled"
+    KEY_LENS_OVERRIDE_VALUE = "lens_override_value"
 
     rendering_targets = {
         "local": "Local machine rendering",
@@ -160,7 +163,20 @@ class RenderCreator(Creator):
                 "mark_for_review",
                 label="Review",
                 default=self.mark_for_review
-            )
+            ),
+            UISeparatorDef(),
+            BoolDef(
+                self.KEY_LENS_OVERRIDE_ENABLED,
+                label="Override Lens Data",
+                tooltip="Manually set lens information for burn-in",
+                default=False,
+            ),
+            TextDef(
+                self.KEY_LENS_OVERRIDE_VALUE,
+                label="Lens Override",
+                tooltip="Lens info to display (e.g. 50mm)",
+                default="",
+            ),
         ]
         return output
 
@@ -196,6 +212,19 @@ class RenderCreator(Creator):
                     "End frame for publish. Populated from composition "
                     "when instance is created. Edit to override."
                 ),
+            ),
+            UISeparatorDef(),
+            BoolDef(
+                self.KEY_LENS_OVERRIDE_ENABLED,
+                label="Override Lens Data",
+                tooltip="Manually set lens information for burn-in",
+                default=False,
+            ),
+            TextDef(
+                self.KEY_LENS_OVERRIDE_VALUE,
+                label="Lens Override",
+                tooltip="Lens info to display (e.g. 50mm)",
+                default="",
             ),
         ]
 
