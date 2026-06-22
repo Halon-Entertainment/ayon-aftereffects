@@ -400,22 +400,90 @@ class AfterEffectsRoute(WebSocketRoute):
     # This method calls function on the client side
     # client functions
     async def set_context(self, project, folder, task):
-        """
-        Sets 'project', 'folder' and 'task' to envs, eg. setting context
+        """Apply an in-session context change to the running AE host.
+
+        Updates the AYON context environment variables and then drives
+        ayon-core's host context-change machinery so the workfile save
+        path resolves against the NEW shot. Updating the environment
+        variables alone is not enough: ayon-core resolves the workdir and
+        folder/task entities through ``registered_host()`` and emits a
+        ``taskChanged`` event that downstream tools (Workfiles) rely on to
+        recompute the save path. Without this call the host kept the
+        previous shot's workdir and saved files into the wrong shot.
 
         Args:
-            project (str)
-            folder (str)
-            task (str)
+            project (str): Project name to switch to.
+            folder (str): Folder (shot/asset) path to switch to.
+            task (str): Task name to switch to.
         """
-        log.info("Setting context change")
-        log.info("project {} folder {} ".format(project, folder))
+        log.info(
+            "Setting AE context change: project=%s folder=%s task=%s",
+            project,
+            folder,
+            task,
+        )
         if project:
             os.environ["AYON_PROJECT_NAME"] = project
         if folder:
             os.environ["AYON_FOLDER_PATH"] = folder
         if task:
             os.environ["AYON_TASK_NAME"] = task
+
+        self._refresh_host_context()
+
+    @staticmethod
+    def _refresh_host_context():
+        """Drive ayon-core's context change for the running host.
+
+        Resolves the folder and task entities from the freshly updated
+        context environment variables and calls
+        ``change_current_context`` so the registered host updates its
+        current context (workdir, folder/task entities) and emits the
+        ``taskChanged`` event. This is what makes a mid-session shot
+        switch resolve workfile save paths to the new shot.
+
+        Failures are logged but not raised: a context switch that cannot
+        resolve entities must not crash the running AE session, and the
+        environment variables are already updated as a fallback.
+        """
+        from ayon_core.pipeline.context_tools import (
+            change_current_context,
+            get_current_folder_entity,
+            get_current_task_entity,
+        )
+
+        folder_entity = get_current_folder_entity()
+        task_entity = get_current_task_entity()
+        if not folder_entity or not task_entity:
+            log.warning(
+                "Could not resolve folder/task entities for context "
+                "change (folder=%s task=%s). Environment variables were "
+                "updated but host context was not refreshed; workfile "
+                "save path may be stale.",
+                os.environ.get("AYON_FOLDER_PATH"),
+                os.environ.get("AYON_TASK_NAME"),
+            )
+            return
+
+        try:
+            new_context = change_current_context(folder_entity, task_entity)
+        except Exception:
+            log.warning(
+                "Failed to refresh host context after context change. "
+                "Environment variables were updated but the running AE "
+                "session may still resolve the previous shot's save path.",
+                exc_info=True,
+            )
+            return
+
+        log.info(
+            "Host context refreshed: project=%s folder=%s task=%s "
+            "workdir=%s",
+            new_context.get("project_name"),
+            new_context.get("folder_path"),
+            new_context.get("task_name"),
+            os.environ.get("AYON_WORKDIR"),
+        )
 
     async def read(self):
         log.debug(

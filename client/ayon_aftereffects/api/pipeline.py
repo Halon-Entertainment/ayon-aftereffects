@@ -78,6 +78,14 @@ class AfterEffectsHost(HostBase, IWorkfileHost, ILoadHost, IPublishHost):
         return [".aep"]
 
     def save_workfile(self, dst_path=None):
+        log.info(
+            "Saving AE workfile to %s (context folder=%s task=%s "
+            "workdir=%s)",
+            dst_path,
+            os.environ.get("AYON_FOLDER_PATH"),
+            os.environ.get("AYON_TASK_NAME"),
+            os.environ.get("AYON_WORKDIR"),
+        )
         self.stub.saveAs(dst_path, True)
 
     def open_workfile(self, filepath):
