@@ -208,6 +208,26 @@ def _get_next_version(stub, base_name):
     return f"v{max_version + 1:03d}"
 
 
+def _has_render_queue_item(stub, comp_id):
+    """Return whether *comp_id* already has a Render Queue item.
+
+    ``get_render_info`` raises ``ValueError`` when the comp has no
+    Render Queue item (the JSX side reports this as an error string).
+    Treat that as "no item present" so the caller can safely add one.
+
+    Args:
+        stub: After Effects websocket stub.
+        comp_id (int): Composition id.
+
+    Returns:
+        bool: True if a Render Queue item already exists for the comp.
+    """
+    try:
+        return bool(stub.get_render_info(comp_id))
+    except ValueError:
+        return False
+
+
 def create_shot_comp():
     """Create a new composition with AYON task settings applied.
 
@@ -252,7 +272,12 @@ def create_shot_comp():
         entity=entity,
     )
 
-    stub.setup_render_queue(comp_id)
+    # Guard against adding a second Render Queue item for this comp.
+    # A freshly created comp has no render item, so this normally runs
+    # once. If a comp somehow already has one (re-run, recreated
+    # instance), skip the add so we never produce duplicates (ENG-4810).
+    if not _has_render_queue_item(stub, comp_id):
+        stub.setup_render_queue(comp_id)
 
     msg = (
         f"Created comp '{comp_name}' — "
