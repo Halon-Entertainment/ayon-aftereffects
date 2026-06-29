@@ -112,20 +112,13 @@ class CollectAERender(publish.AbstractCollectRender):
             task_name = inst.data.get("task")
 
             stub = CollectAERender.get_stub()
-            render_q = stub.get_render_info(comp_id)
+            render_q = self._collect_render_queue(stub, comp_info)
             if not render_q:
-                self.log.info(
-                    "No Render Queue item for '%s', setting up "
-                    "H.264 output automatically.", comp_info.name
+                raise PublishValidationError(
+                    "Failed to setup Render Queue for '{}'. "
+                    "Add composition to Render Queue "
+                    "manually.".format(comp_info.name)
                 )
-                stub.setup_render_queue(comp_id)
-                render_q = stub.get_render_info(comp_id)
-                if not render_q:
-                    raise PublishValidationError(
-                        "Failed to setup Render Queue for '{}'. "
-                        "Add composition to Render Queue "
-                        "manually.".format(comp_info.name)
-                    )
             render_item = render_q[0]
 
             instance_families = inst.data.get("families", [])
@@ -214,6 +207,52 @@ class CollectAERender(publish.AbstractCollectRender):
             instances.append(instance)
 
         return instances
+
+    def _collect_render_queue(self, stub, comp_info):
+        """Return Render Queue info for a comp, setting it up if missing.
+
+        ``get_render_info`` raises ``ValueError`` (carrying the JSX error
+        message) instead of returning an empty list. The cases are:
+
+        * no Render Queue item -> set one up automatically (legit).
+        * too many items for the comp -> a broken comp. Layer C
+          (``getRenderInfo`` in hostscript.jsx) auto-prunes extras so
+          this should not surface, but if it does we raise a clear
+          validation error instead of blindly adding yet another item
+          and making the duplication worse (ENG-4810).
+
+        Args:
+            stub: After Effects websocket stub.
+            comp_info (AEItem): Composition properties (for name/logging).
+
+        Returns:
+            list: Render Queue records (one per output module).
+
+        Raises:
+            PublishValidationError: If the comp has more than one Render
+                Queue item and it could not be auto-repaired.
+        """
+        try:
+            return stub.get_render_info(comp_info.id)
+        except ValueError as exc:
+            message = str(exc)
+            if "more items" in message:
+                raise PublishValidationError(
+                    "Composition '{}' has more than one Render Queue "
+                    "item. Remove the extra Render Queue items for this "
+                    "composition and publish again.".format(comp_info.name)
+                )
+            # No Render Queue item yet — set one up automatically.
+            self.log.info(
+                "No Render Queue item for '%s', setting up output "
+                "automatically.", comp_info.name
+            )
+
+        stub.setup_render_queue(comp_info.id)
+        try:
+            return stub.get_render_info(comp_info.id)
+        except ValueError:
+            return []
 
     def get_expected_files(self, render_instance):
         """

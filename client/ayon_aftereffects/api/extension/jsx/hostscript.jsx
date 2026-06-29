@@ -536,6 +536,31 @@ function getRenderInfo(comp_id){
             }
         }
 
+        // ENG-4810: auto-heal comps that ended up with multiple Render Queue
+        // items (e.g. repeated New Shot Comp, manual duplicates). Keep one
+        // item per comp instead of failing the publish. Prefer a queued
+        // (non-DONE) item so a fresh render is possible.
+        var matching_indices = [];
+        for (i = 1; i <= app.project.renderQueue.numItems; ++i){
+            if (app.project.renderQueue.item(i).comp.id == comp_id){
+                matching_indices.push(i);
+            }
+        }
+        if (matching_indices.length > 1){
+            var keep_index = matching_indices[0];
+            for (var m = 0; m < matching_indices.length; m++){
+                if (app.project.renderQueue.item(matching_indices[m]).status != RQItemStatus.DONE){
+                    keep_index = matching_indices[m];
+                    break;
+                }
+            }
+            for (var m = matching_indices.length - 1; m >= 0; m--){
+                if (matching_indices[m] != keep_index){
+                    app.project.renderQueue.item(matching_indices[m]).remove();
+                }
+            }
+        }
+
         // properly validate as `numItems` won't change magically
         var comp_id_count = 0;
         for (i = 1; i <= app.project.renderQueue.numItems; ++i){
@@ -566,6 +591,7 @@ function getRenderInfo(comp_id){
     }
 
     if (comp_id_count > 1){
+        // defensive: dedup above should prevent this
         return _prepareError("There cannot be more items in Render Queue for '" + comp_name + "'!")
     }
 
@@ -924,6 +950,16 @@ function setupRenderQueue(comp_id, template_name){
 
     app.beginUndoGroup("Setup Render Queue");
     try {
+        // Remove any existing render queue items for this comp so setup is
+        // idempotent — publish requires exactly one RQ item per comp
+        // (see getRenderInfo). Prevents duplicates from repeated
+        // "New Shot Comp" / auto-setup calls (ENG-4810).
+        for (var ri = app.project.renderQueue.numItems; ri >= 1; --ri){
+            var existing_item = app.project.renderQueue.item(ri);
+            if (existing_item.comp && existing_item.comp.id == comp_id){
+                existing_item.remove();
+            }
+        }
         var rqItem = app.project.renderQueue.items.add(comp);
         var om = rqItem.outputModule(1);
         var templates = om.templates;
