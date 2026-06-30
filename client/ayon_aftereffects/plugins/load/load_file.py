@@ -1,28 +1,29 @@
 import re
-import os
 
-from ayon_core.pipeline import get_representation_path
 from ayon_aftereffects import api
+import ayon_api
 
 
 class FileLoader(api.AfterEffectsLoader):
-    """Load images
+    """Load images and full AE workfiles.
 
     Stores the imported product version in a container named after the folder.
     """
     label = "Load file"
 
-    product_types = {
+    product_base_types = {
         "image",
         "plate",
         "render",
         "prerender",
         "review",
         "audio",
+        "workfile",
     }
+    product_types = product_base_types
     representations = {"*"}
 
-    def load(self, context, name=None, namespace=None, data=None):
+    def load(self, context, name=None, namespace=None, options=None):
         stub = self.get_stub()
         loaded_item_name = f"{context['folder']['name']}_{name}"
         footages = stub.get_items(comps=False, footages=True, folders=False)
@@ -47,6 +48,9 @@ class FileLoader(api.AfterEffectsLoader):
         path = path.replace("\\", "/")
         if '.psd' in path:
             import_options['ImportAsType'] = 'ImportAsType.COMP'
+
+        if import_options.get("sequence"):
+            import_options['fps'] = self._get_fps_data(context)
 
         loaded_item = stub.import_file(
             path, stub.LOADED_ICON + loaded_item_name, import_options
@@ -90,10 +94,8 @@ class FileLoader(api.AfterEffectsLoader):
             )
         else:  # switching version - keep same name
             loaded_item_name = container["namespace"]
-        path = get_representation_path(repre_entity)
+        path = self.filepath_from_context(context)
 
-        if len(repre_entity["files"]) > 1:
-           path = os.path.dirname(path)
         stub.replace_item(item.id, path, stub.LOADED_ICON + loaded_item_name)
         stub.imprint(
             item.id,
@@ -104,3 +106,29 @@ class FileLoader(api.AfterEffectsLoader):
             }
         )
 
+    def _get_fps_data(self, context: dict) -> float:
+        """Get fps data from version. Fallback to task or folder
+        if version doesn't have fps.
+
+        Args:
+            context (dict): context data with version, task and folder info
+
+        Returns:
+            float: fps value
+        """
+        version_entity = context["version"]
+        version_attributes = version_entity["attrib"]
+        if "fps" in version_attributes:
+            return version_attributes["fps"]
+        task_id = context["version"]["taskId"]
+        if task_id is not None:
+            task_entity = ayon_api.get_task_by_id(
+                project_name=context["project"]["name"],
+                task_id=task_id,
+                fields={"attrib"},
+            )
+            if task_entity:
+                return task_entity["attrib"]["fps"]
+
+        folder_fps = context["folder"]["attrib"]["fps"]
+        return folder_fps
