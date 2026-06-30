@@ -58,7 +58,9 @@ class CollectAERender(publish.AbstractCollectRender):
     ) -> list[AERenderInstance]:
         instances = []
 
-        app_version = CollectAERender.get_stub().get_app_version()
+        stub = CollectAERender.get_stub()
+
+        app_version = stub.get_app_version()
         app_version = app_version[0:4]
 
         current_file = context.data["currentFile"]
@@ -66,7 +68,7 @@ class CollectAERender(publish.AbstractCollectRender):
 
         project_entity = context.data["projectEntity"]
 
-        compositions = CollectAERender.get_stub().get_items(True)
+        compositions = stub.get_items(True)
         compositions_by_id = {item.id: item for item in compositions}
         for inst in context:
             if not inst.data.get("active", True):
@@ -80,13 +82,12 @@ class CollectAERender(publish.AbstractCollectRender):
                 continue
 
             comp_id = int(inst.data["members"][0])
-
-            comp_info = CollectAERender.get_stub().get_comp_properties(comp_id)
+            comp_info = stub.get_comp_properties(comp_id)
 
             if not comp_info:
                 self.log.warning("Orphaned instance, deleting metadata")
                 inst_id = inst.data.get("instance_id") or str(comp_id)
-                CollectAERender.get_stub().remove_instance(inst_id)
+                stub.remove_instance(inst_id)
                 continue
 
             frame_start = comp_info.frameStart
@@ -111,7 +112,6 @@ class CollectAERender(publish.AbstractCollectRender):
 
             task_name = inst.data.get("task")
 
-            stub = CollectAERender.get_stub()
             render_q = self._collect_render_queue(stub, comp_info)
             if not render_q:
                 raise PublishValidationError(
@@ -126,15 +126,9 @@ class CollectAERender(publish.AbstractCollectRender):
                 instance_families.append(product_base_type)
             product_name = inst.data["productName"]
 
-            kwargs = dict(
+            instance = AERenderInstance(
                 productType=product_type,
                 productBaseType=product_base_type,
-            )
-            if "productBaseType" not in attr.fields_dict(AERenderInstance):
-                kwargs["productType"] = kwargs.pop("productBaseType")
-
-            instance = AERenderInstance(
-                **kwargs,
                 family=product_base_type,
                 families=instance_families,
                 version=version,
@@ -150,7 +144,7 @@ class CollectAERender(publish.AbstractCollectRender):
                 name=product_name,
                 resolutionWidth=render_item.width,
                 resolutionHeight=render_item.height,
-                pixelAspect=1,
+                pixelAspect=comp_info.pixelAspect,
                 tileRendering=False,
                 tilesX=0,
                 tilesY=0,
@@ -162,7 +156,9 @@ class CollectAERender(publish.AbstractCollectRender):
                 app_version=app_version,
                 publish_attributes=inst.data.get("publish_attributes", {}),
                 # one path per output module, could be multiple
-                render_queue_file_paths=[item.file_name for item in render_q],
+                render_queue_file_paths=[
+                    item.file_name for item in render_queue
+                ],
                 # The source instance this render instance replaces
                 source_instance=inst,
                 variant=inst.data.get("variant", ""),
