@@ -157,7 +157,7 @@ class CollectAERender(publish.AbstractCollectRender):
                 publish_attributes=inst.data.get("publish_attributes", {}),
                 # one path per output module, could be multiple
                 render_queue_file_paths=[
-                    item.file_name for item in render_queue
+                    item.file_name for item in render_q
                 ],
                 # The source instance this render instance replaces
                 source_instance=inst,
