@@ -7,12 +7,18 @@
 <link  id="hostStyle" rel="stylesheet" href="css/styles.css"/>
 
 <style type="text/css">
-  html, body, iframe {
+  html, iframe {
     width: 100%;
     height: 100%;
     border: 0px;
     margin: 0px;
     overflow: hidden;
+  }
+  body {
+    width: 100%;
+    border: 0px;
+    margin: 0px;
+    overflow-y: auto;
   }
   button {width: 100%;}
 </style>
@@ -101,6 +107,18 @@
               $("a#workfiles-button").bind("click", function() {
 
                 RPC.call('AfterEffects.workfiles_route').then(function (data) {
+                }, function (error) {
+                    alert(error);
+                });
+              });
+            });
+    </script>
+
+    <script type=text/javascript>
+            $(function() {
+              $("a#version-up-workfile-button").bind("click", function() {
+
+                RPC.call('AfterEffects.version_up_workfile_route').then(function (data) {
                 }, function (error) {
                     alert(error);
                 });
@@ -237,6 +255,12 @@
               alert(error);
           });
         });
+        $("a#run-scripts-button").bind("click", function() {
+          RPC.call('AfterEffects.run_scripts_route').then(function (data) {
+          }, function (error) {
+              alert(error);
+          });
+        });
       });
     </script>
 
@@ -260,6 +284,7 @@
 
         <div>
             <div><a href=# id=workfiles-button><button class="hostFontSize">Workfiles...</button></a></div>
+            <div><a href=# id=version-up-workfile-button><button class="hostFontSize">Version Up Workfile</button></a></div>
             <div><a href=# id=loader-button><button class="hostFontSize">Load...</button></a></div>
             <div><a href=# id=publish-button><button class="hostFontSize">Publish...</button></a></div>
             <div><a href=# id=sceneinventory-button><button class="hostFontSize">Manage...</button></a></div>
@@ -273,6 +298,7 @@
             <div><a href=# id=build-workfile-button><button class="hostFontSize">Build Workfile from template</button></a></div>
             <div><a href=# id=separator3><button class="hostFontSize">&nbsp;</button></a></div>
             <div><a href=# id=script-editor-button><button class="hostFontSize">Script Editor</button></a></div>
+            <div><a href=# id=run-scripts-button><button class="hostFontSize">Run Scripts...</button></a></div>
             <div><a href=# id=experimental-button><button class="hostFontSize">Experimental Tools...</button></a></div>
             <div style="text-align: center;">
               <a href=#>
@@ -281,7 +307,7 @@
                 </button>
               </a>
             </div>
- 
+
             <div><a href=# id=create-shot-comp-button><button class="hostFontSize">New Shot Comp</button></a></div>
             <div><a href=# id=versionup-button><button class="hostFontSize">Version Up</button></a></div>
         </div>
@@ -291,7 +317,7 @@
     <!-- <script src="js/libs/PlayerDebugMode"></script> -->
     <script src="js/libs/wsrpc.js"></script>
     <script src="js/libs/loglevel.min.js"></script>
-    <script  src="js/libs/CSInterface.js"></script>
+    <script src="js/libs/CSInterface.js"></script>
 
     <script src="js/themeManager.js"></script>
     <script src="js/main.js"></script>

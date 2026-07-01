@@ -8,7 +8,7 @@ from ayon_aftereffects.api.lib import get_background_layers
 
 class BackgroundLoader(api.AfterEffectsLoader):
     """
-        Load images from Background product type
+        Load images from Background product base type
         Creates for each background separate folder with all imported images
         from background json AND automatically created composition with layers,
         each layer for separate image.
@@ -17,8 +17,10 @@ class BackgroundLoader(api.AfterEffectsLoader):
         metadata
     """
     label = "Load JSON Background"
-    product_types = {"background"}
-    representations = {"json"}
+    product_base_types = {"background"}
+    product_types = product_base_types
+    representations = {"*"}
+    extensions = {"json"}
 
     def load(self, context, name=None, namespace=None, data=None):
         stub = self.get_stub()
