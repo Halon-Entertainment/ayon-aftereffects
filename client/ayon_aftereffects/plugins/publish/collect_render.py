@@ -157,7 +157,7 @@ class CollectAERender(publish.AbstractCollectRender):
                 publish_attributes=inst.data.get("publish_attributes", {}),
                 # one path per output module, could be multiple
                 render_queue_file_paths=[
-                    item.file_name for item in render_queue
+                    item.file_name for item in render_q
                 ],
                 # The source instance this render instance replaces
                 source_instance=inst,
@@ -185,6 +185,22 @@ class CollectAERender(publish.AbstractCollectRender):
                 variant = ""
             burnin_members["variant"] = variant
             inst.data["burninDataMembers"] = burnin_members
+
+            # Bridge lens override creator_attributes to top-level
+            # instance.data so halon-slate's collect_ae_camera_data
+            # collector can read them directly.
+            creator_attributes = inst.data.get("creator_attributes", {})
+            inst.data["lens_override_enabled"] = creator_attributes.get(
+                "lens_override_enabled", False
+            )
+            inst.data["lens_override_value"] = creator_attributes.get(
+                "lens_override_value", ""
+            )
+            if inst.data["lens_override_enabled"]:
+                self.log.debug(
+                    "Lens override bridged: %r",
+                    inst.data["lens_override_value"],
+                )
 
             creator_attributes = inst.data["creator_attributes"]
             if creator_attributes["render_target"] == "local":
