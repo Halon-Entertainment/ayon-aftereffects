@@ -1,18 +1,48 @@
 from __future__ import annotations
 import os
 import re
+import sys
 import json
 import contextlib
-import logging
 import pyblish
 from typing import Union
 
 from ayon_core.pipeline.context_tools import get_current_task_entity
+from ayon_core.lib import Logger
 
 from .ws_stub import get_stub
 
-log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+log = Logger.get_logger(__name__)
+
+
+def raise_window_to_front(window):
+    """Raise a Qt window to the foreground.
+    On Windows, activateWindow() is silently ignored when the calling
+    process does not own the foreground (e.g. when triggered via the
+    CEP panel). AttachThreadInput temporarily borrows the foreground
+    thread's input state so SetForegroundWindow succeeds even on the
+    first call, before Python has ever received focus.
+    Args:
+        window (QtWidgets.QWidget): Window to bring to the front.
+    """
+    window.show()
+    window.raise_()
+    window.activateWindow()
+    if sys.platform == "win32":
+        import ctypes
+        user32 = ctypes.windll.user32
+        hwnd = int(window.winId())
+        foreground_hwnd = user32.GetForegroundWindow()
+        foreground_tid = user32.GetWindowThreadProcessId(
+            foreground_hwnd, None
+        )
+        current_tid = ctypes.windll.kernel32.GetCurrentThreadId()
+        if foreground_tid and foreground_tid != current_tid:
+            user32.AttachThreadInput(current_tid, foreground_tid, True)
+            user32.SetForegroundWindow(hwnd)
+            user32.AttachThreadInput(current_tid, foreground_tid, False)
+        else:
+            user32.SetForegroundWindow(hwnd)
 
 
 @contextlib.contextmanager
@@ -208,6 +238,26 @@ def _get_next_version(stub, base_name):
     return f"v{max_version + 1:03d}"
 
 
+def _has_render_queue_item(stub, comp_id):
+    """Return whether *comp_id* already has a Render Queue item.
+
+    ``get_render_info`` raises ``ValueError`` when the comp has no
+    Render Queue item (the JSX side reports this as an error string).
+    Treat that as "no item present" so the caller can safely add one.
+
+    Args:
+        stub: After Effects websocket stub.
+        comp_id (int): Composition id.
+
+    Returns:
+        bool: True if a Render Queue item already exists for the comp.
+    """
+    try:
+        return bool(stub.get_render_info(comp_id))
+    except ValueError:
+        return False
+
+
 def create_shot_comp():
     """Create a new composition with AYON task settings applied.
 
@@ -252,7 +302,12 @@ def create_shot_comp():
         entity=entity,
     )
 
-    stub.setup_render_queue(comp_id)
+    # Guard against adding a second Render Queue item for this comp.
+    # A freshly created comp has no render item, so this normally runs
+    # once. If a comp somehow already has one (re-run, recreated
+    # instance), skip the add so we never produce duplicates (ENG-4810).
+    if not _has_render_queue_item(stub, comp_id):
+        stub.setup_render_queue(comp_id)
 
     msg = (
         f"Created comp '{comp_name}' — "
@@ -303,4 +358,4 @@ def publish_in_test(log, close_plugin_name=None):
             try:
                 close_plugin().process(context)
             except Exception as exp:
-                print(exp)
+                log.error(exp)

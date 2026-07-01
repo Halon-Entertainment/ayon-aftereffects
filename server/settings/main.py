@@ -8,6 +8,7 @@ from .publish_plugins import (
 )
 from .workfile_builder import WorkfileBuilderPlugin
 from .templated_workfile_build import TemplatedWorkfileBuildModel
+from .scripts import Scripts
 
 
 class AfterEffectsSettings(BaseSettingsModel):
@@ -17,6 +18,13 @@ class AfterEffectsSettings(BaseSettingsModel):
         False,
         title="Install AYON Extension",
         description="Triggers pre-launch hook which installs extension."
+    )
+    auto_open_panel: bool = SettingsField(
+        True,
+        title="Auto-open AYON Panel",
+        description=(
+            "Automatically open the AYON panel on every After Effects launch."
+        ),
     )
 
     imageio: AfterEffectsImageIOModel = SettingsField(
@@ -44,10 +52,15 @@ class AfterEffectsSettings(BaseSettingsModel):
         title="Templated Workfile Build Settings",
         description="Build workfiles from templates with placeholder loading.",
     )
+    scripts: Scripts = SettingsField(
+        default_factory=Scripts,
+        title="Scripts",
+    )
 
 
 DEFAULT_AFTEREFFECTS_SETTING = {
     "auto_install_extension": True,
+    "auto_open_panel": True,
     "create": {
         "RenderCreator": {
             "mark_for_review": True,
@@ -62,4 +75,5 @@ DEFAULT_AFTEREFFECTS_SETTING = {
         "custom_templates": [],
     },
     "templated_workfile_build": {"profiles": []},
+    "scripts": {"configs": []},
 }
